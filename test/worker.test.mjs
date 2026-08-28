@@ -122,6 +122,43 @@ test("oversized text is truncated, not rejected", async () => {
   assert.equal(d.results[0].truncated, true);
 });
 
+test("request word budget is actually enforced across texts", async () => {
+  // Two 1500-word texts: 2000-word request budget admits the first in full
+  // and clips the second to ~500 words. Total scored must stay <= 2000.
+  const words1500 = (HUMAN_TEXT + " ").repeat(29); // ~1500 words
+  const env = { QUOTA: mockKV() };
+  const r = await worker.fetch(req({
+    install: "budget",
+    texts: [{ id: "a", text: words1500 }, { id: "b", text: words1500 }],
+  }), env);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  const total = d.results.reduce((n, x) => n + x.words, 0);
+  assert.ok(total <= 2000, `scored ${total} words, budget is 2000`);
+  assert.equal(d.results[1].truncated, true, "second text must be clipped");
+});
+
+test("no internal CLI advice leaks into verdicts", () => {
+  for (const text of [AI_TEXT, HUMAN_TEXT, "lgtm, merging", AI_TEXT.slice(0, 200)]) {
+    const s = scoreText(text);
+    assert.ok(!s.verdict.includes("--house"), `CLI flag leaked: ${s.verdict}`);
+    assert.ok(!s.verdict.includes("--"), `CLI-ish string leaked: ${s.verdict}`);
+  }
+});
+
+test("non-English abstention says why", () => {
+  const german = "Dieser Pull Request behebt einen Fehler in der Konfigurationsdatei. " +
+    "Beim Einlesen einer leeren Sektion ist das Programm abgestuerzt, weil der Parser " +
+    "keine Pruefung auf fehlende Schluessel hatte. Ich habe einen Regressionstest " +
+    "hinzugefuegt und zwei Warnungen des Compilers beseitigt. Getestet unter Debian " +
+    "und Arch, beide Systeme laufen sauber durch. Die Aenderung ist bewusst klein " +
+    "gehalten, damit sie leicht zu pruefen ist und keine weiteren Abhaengigkeiten braucht.";
+  const s = scoreText(german);
+  assert.equal(s.abstained, true);
+  assert.match(s.verdict, /English/);
+  assert.ok(!/under 20 words/.test(s.verdict));
+});
+
 test("garbage input rejected cleanly", async () => {
   const env = { QUOTA: mockKV() };
   for (const body of [{}, { install: "x" }, { install: "x", texts: [] }, { install: "x", texts: [{ id: 0, text: "" }] }]) {

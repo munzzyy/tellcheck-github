@@ -24,17 +24,22 @@ MOCK_RESPONSE = {
     "ok": True,
     "results": [
         {"id": "b0", "flagged": True, "abstained": False, "p": 0.97,
-         "verdict": "flags as AI at the 5%-FPR operating point", "words": 300,
+         "verdict": "flags as AI at the 5% false-positive operating point", "words": 300,
          "truncated": False, "language": "en",
          "signals": ["31 buzzword hits (delve, leverage, seamless)"]},
         {"id": "b1", "flagged": False, "abstained": False, "p": 0.03,
-         "verdict": "no detection at the 5%-FPR operating point", "words": 120,
+         "verdict": "no detection at the 5% false-positive operating point", "words": 120,
          "truncated": False, "language": "en", "signals": []},
         {"id": "b2", "flagged": False, "abstained": True, "p": None,
-         "verdict": "n/a (under 20 words)", "words": 5,
+         "verdict": "not scored: under 20 words", "words": 5,
          "truncated": False, "language": "en", "signals": []},
+        {"id": "b3", "flagged": False, "abstained": True, "p": None,
+         "verdict": "not scored: the classifier is calibrated for English only",
+         "words": 80, "truncated": False, "language": "de", "signals": []},
+        # b4 deliberately missing: the fixture has 5 blocks, the worker "dropped" one.
     ],
-    "quota": {"used": 3, "limit": 30, "meter": "ok"},
+    "quota": {"used": 4, "limit": 30, "meter": "ok"},
+    "dropped": 1,
 }
 
 FIXTURE = f"""<!doctype html>
@@ -49,6 +54,12 @@ FIXTURE = f"""<!doctype html>
   <p>lgtm but the second case still segfaults on my box, see the trace below</p>
 </div></div>
 <div class="timeline-comment"><div class="comment-body"><p>thanks!</p></div></div>
+<div class="timeline-comment"><div class="comment-body">
+  <p>Dieser Pull Request behebt einen Fehler in der Konfigurationsdatei und mehr.</p>
+</div></div>
+<div class="timeline-comment"><div class="comment-body">
+  <p>this fifth comment is over the mocked per-scan limit and gets no result</p>
+</div></div>
 
 <script>
   window.__sent = null;
@@ -114,14 +125,16 @@ def main():
         ("flag chip on AI comment", "slopscreen-flag" in dom and "flags as AI (p 0.97)" in dom),
         ("clean chip on human comment", "slopscreen-clean" in dom and "no AI detection" in dom),
         ("abstain chip on short comment", "slopscreen-abstain" in dom and "too short to judge" in dom),
+        ("English-only abstain labeled honestly", "not scored (English only)" in dom),
+        ("dropped block gets a not-scored chip", "not scored (scan limit)" in dom),
         ("signal panel present", "31 buzzword hits" in dom),
         ("signal-not-proof footer", "not proof" in dom),
-        ("fab summary updated", "1 of 2 flagged" in dom),
+        ("fab summary counts flags and misses", "1 of 2 flagged, 1 over the scan limit" in dom),
     ]
 
     m = re.search(r'<div id="test-output">([^<]+)</div>', dom)
     sent = json.loads(m.group(1))["sentTexts"] if m else None
-    checks.append(("scan sent 3 texts", bool(sent) and len(sent) == 3))
+    checks.append(("scan sent 5 texts", bool(sent) and len(sent) == 5))
     checks.append(("title prepended to first block",
                    bool(sent) and sent[0].startswith("Add comprehensive error handling")))
     checks.append(("code blocks stripped from sent text",

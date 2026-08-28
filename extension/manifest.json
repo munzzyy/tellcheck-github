@@ -14,19 +14,14 @@
     }
   },
   "permissions": ["storage"],
-  "host_permissions": ["https://extensionpay.com/*"],
   "background": {
-    "scripts": ["lib/ExtPay.js", "config.js", "background.js"]
+    "scripts": ["config.js", "background.js"]
   },
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
       "js": ["content/github.js"],
       "css": ["content/github.css"]
-    },
-    {
-      "matches": ["https://extensionpay.com/*"],
-      "js": ["lib/ExtPay.js"]
     }
   ],
   "action": {

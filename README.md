@@ -11,11 +11,11 @@ extension/          the MV3 extension (Firefox-first)
   background.js     all network calls live here (scoring API, GitHub API, ExtPay)
   content/          scan button, badges, signal panels on github.com
   popup/ options/   quota display, CSV export, settings
-  lib/ExtPay.js     unmodified ExtensionPay client (AGPLv3), vendored
 worker/             the scoring API
   src/index.js      POST /score with per-install daily metering (KV)
   src/detector-core.js   PRIVATE, gitignored; synced from ~/Projects/noslop
 site/               landing page + privacy policy (deploy as a Pages project)
+vendor/ExtPay.js    unmodified ExtensionPay client (AGPLv3), staged for a paid version
 tools/              sync_detector.py, gen_icons.py, package.sh
 test/               worker test suite (node --test)
 ```
@@ -43,9 +43,14 @@ Put the live URL into extension/config.js API_URL if it differs from the default
 
 ## Monetization
 
-ExtensionPay (5% + Stripe fees, pays into the connected Stripe account). Payments stay
-OFF until EXTPAY_ID in extension/config.js is set to a registered extension id from
-extensionpay.com. With it unset, every feature is free and no upgrade UI shows.
+ExtensionPay (5% + Stripe fees, pays into the connected Stripe account). v0.1 ships
+with payments fully OFF: vendor/ExtPay.js is NOT in the manifest or the zip, so the
+extension carries no payment code, no extensionpay.com permission, and no upgrade UI.
+To enable in a later version: register on extensionpay.com, set EXTPAY_ID in
+extension/config.js, copy vendor/ExtPay.js back to extension/lib/, and restore the
+manifest entries (background scripts list, extensionpay.com content script + host
+permission). background.js already guards every ExtPay touchpoint on typeof, and falls
+back to a 72h-cached paid status when extensionpay.com is unreachable.
 ExtensionPay has no server-side validation API, so paid status is client-asserted; the
 worker bounds abuse with a hard daily ceiling per install. The private detector never
 ships to clients either way.

@@ -14,10 +14,11 @@ all restricted AI-generated contributions this year. Enforcing a policy means a 
 has to read every submission twice.
 
 SlopScreen does the first read. On any GitHub pull request or issue, click scan. The
-description and every comment get a badge saying whether the text statistically reads
-as AI-generated. Each badge opens a breakdown of the exact signals that fired: buzzword
+description and comments get badges saying whether the text statistically reads as
+AI-generated. Each badge opens a breakdown of the exact signals that fired: buzzword
 density, stock phrases, uniform sentence rhythm, chat-UI artifacts, and more. On a
-repo's pull request list, scan all open PRs at once.
+repo's pull request list, scan the 20 most recent open PRs in one click. Anything over
+a scan's limit is labeled "not scored", never silently skipped.
 
 Honest by design. The classifier runs at a 5% false-positive operating point, abstains
 on text too short to judge, and every result is labeled a signal rather than proof.
@@ -42,8 +43,8 @@ Munzzyy1@proton.me
 ## Reviewer notes (paste into "Notes to Reviewer")
 The extension sends the text of the currently viewed GitHub PR/issue to our scoring API
 (a Cloudflare Worker) when the user clicks scan; the API returns a statistical score and
-the matched signals, and does not store the text. The bundled lib/ExtPay.js is the
-unmodified open-source ExtensionPay client (github.com/Glench/ExtPay, AGPLv3) used for
-optional payments. No code is loaded remotely; no analytics. The data_collection_permissions
-key declares websiteContent (scanned text) and technicalAndInteraction (anonymous install
-id for the daily free-scan counter).
+the matched signals, and does not store the text. No code is loaded remotely; no
+analytics; no payment code in this version. The data_collection_permissions key declares
+websiteContent (the scanned text) and, as optional, technicalAndInteraction (a random
+meter id sent with scans for the daily free-scan counter; it rotates every UTC day, so
+nothing is trackable across days).

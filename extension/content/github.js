@@ -101,18 +101,29 @@
 
   function chipFor(result) {
     let cls, label;
-    if (result.abstained) {
-      cls = "abstain";
-      label = "SlopScreen: too short to judge";
-    } else if (result.flagged) {
+    if (result.flagged) {
+      // An artifact hit can be flagged and p-less; the flag wins the chip.
       cls = "flag";
-      label = `SlopScreen: flags as AI (p ${result.p})`;
+      label = result.p === null || result.p === undefined
+        ? "SlopScreen: flags as AI (chat artifact)"
+        : `SlopScreen: flags as AI (p ${result.p})`;
+    } else if (result.abstained) {
+      cls = "abstain";
+      label = result.language && result.language !== "en"
+        ? "SlopScreen: not scored (English only)"
+        : "SlopScreen: too short to judge";
     } else {
       cls = "clean";
       label = "SlopScreen: no AI detection";
     }
     const chip = el("button", `${NS}-chip ${NS}-${cls}`, label);
     chip.type = "button";
+    return chip;
+  }
+
+  function notScoredChip() {
+    const chip = el("span", `${NS}-chip ${NS}-abstain`, "SlopScreen: not scored (scan limit)");
+    chip.title = "This block was over the per-scan limit. Scan again to cover the rest.";
     return chip;
   }
 
@@ -159,7 +170,7 @@
       const resp = await api.runtime.sendMessage({
         type: "scan",
         texts: texts.map(({ id, text }) => ({ id, text })),
-      });
+      }).catch(() => null);
       if (!resp || !resp.ok) {
         b.textContent = resp && resp.error === "quota"
           ? "Daily free scans used up"
@@ -167,17 +178,25 @@
         return;
       }
       const byId = new Map(resp.results.map((r) => [r.id, r]));
-      let flagged = 0, scored = 0;
+      let flagged = 0, scored = 0, missed = 0;
       for (const t of texts) {
         const r = byId.get(t.id);
-        if (!r) continue;
+        if (!r) {
+          // Over the per-request cap: say so instead of silently skipping.
+          t.el.insertAdjacentElement("beforebegin", notScoredChip());
+          missed++;
+          continue;
+        }
         attachBadge(t, r);
         if (!r.abstained) scored++;
         if (r.flagged) flagged++;
       }
+      const tail = missed ? `, ${missed} over the scan limit` : "";
       b.textContent = flagged
-        ? `${flagged} of ${scored} flagged. Rescan`
-        : `No flags in ${scored} scored. Rescan`;
+        ? `${flagged} of ${scored} flagged${tail}. Rescan`
+        : `No flags in ${scored} scored${tail}. Rescan`;
+    } catch {
+      b.textContent = "Scan failed (API unreachable?)";
     } finally {
       busy = false;
     }
@@ -189,31 +208,36 @@
     const b = fab();
     b.textContent = "Scanning open PRs...";
     try {
-      const resp = await api.runtime.sendMessage({ type: "batch", owner, repo });
+      const resp = await api.runtime.sendMessage({ type: "batch", owner, repo }).catch(() => null);
       if (!resp || !resp.ok) {
         b.textContent =
-          resp && resp.error === "github" ? resp.detail :
+          resp && (resp.error === "github" || resp.error === "network") ? (resp.detail || "Network failed") :
           resp && resp.error === "quota" ? "Daily free scans used up" :
           resp && resp.error === "no_open_prs" ? "No open PRs" :
           "Batch scan failed";
         return;
       }
-      let flagged = 0;
+      let flagged = 0, missed = 0;
       for (const row of resp.rows) {
-        if (!row.result) continue;
         const link = document.querySelector(`a[href$='/pull/${row.number}']`);
-        if (!link) continue;
+        if (!link) { if (!row.result) missed++; continue; }
         const old = link.parentElement.querySelector(`.${NS}-mini`);
         if (old) old.remove();
         const r = row.result;
-        const mini = el("span",
-          `${NS}-mini ${NS}-${r.abstained ? "abstain" : r.flagged ? "flag" : "clean"}`,
-          r.abstained ? "short" : r.flagged ? `AI? p ${r.p}` : "ok");
-        mini.title = r.verdict;
+        const mini = r
+          ? el("span",
+              `${NS}-mini ${NS}-${r.abstained ? "abstain" : r.flagged ? "flag" : "clean"}`,
+              r.abstained ? "n/a" : r.flagged ? `AI? p ${r.p}` : "ok")
+          : el("span", `${NS}-mini ${NS}-abstain`, "not scored");
+        mini.title = r ? r.verdict : "over the per-scan limit; scan again to cover the rest";
         link.insertAdjacentElement("afterend", mini);
-        if (r.flagged) flagged++;
+        if (r && r.flagged) flagged++;
+        if (!r) missed++;
       }
-      b.textContent = `${flagged} flagged of ${resp.rows.length}. Rescan`;
+      const tail = missed ? ` (${missed} over the scan limit)` : "";
+      b.textContent = `${flagged} flagged of ${resp.rows.length}${tail}. Rescan`;
+    } catch {
+      b.textContent = "Batch scan failed";
     } finally {
       busy = false;
     }

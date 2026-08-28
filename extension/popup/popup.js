@@ -35,7 +35,13 @@ async function wireCsv() {
   const btn = document.getElementById("csv");
   btn.hidden = false;
   btn.onclick = () => {
-    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    // Double quotes for CSV, and neutralize leading formula characters so a
+    // hostile PR title cannot become an executing cell in a spreadsheet.
+    const esc = (v) => {
+      let s = String(v ?? "");
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
     const lines = [["number", "title", "author", "url", "p", "verdict", "flagged"].join(",")];
     for (const row of lastBatch.rows) {
       const r = row.result || {};

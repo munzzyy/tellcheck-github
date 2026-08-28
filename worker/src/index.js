@@ -71,17 +71,33 @@ export function topSignals(r) {
   return out.slice(0, 5);
 }
 
-export function scoreText(text) {
-  const [clipped, truncated] = truncateWords(text, MAX_WORDS_PER_TEXT);
+export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT) {
+  const [clipped, truncated] = truncateWords(text, Math.min(maxWords, MAX_WORDS_PER_TEXT));
   const r = Noslop.analyze(clipped, { markdown: true });
   const p = r.detect_p; // null = abstained (short text / non-English)
   const flagged = typeof r.detect_verdict === "string" && r.detect_verdict.startsWith("flags as AI");
   const artifact = !!(r.ai_artifacts && r.ai_artifacts.length);
+  const abstained = (p === null || p === undefined) && !artifact;
+  // Product wording only. The raw detector verdicts carry internal CLI advice
+  // that means nothing to an extension user, so compose ours from the facts.
+  let verdict;
+  if (artifact) {
+    verdict = "AI chat artifact present";
+  } else if (abstained) {
+    verdict = r.language && r.language !== "en"
+      ? "not scored: the classifier is calibrated for English only"
+      : "not scored: under 20 words";
+  } else if (flagged) {
+    verdict = "flags as AI at the 5% false-positive operating point" +
+      (r.words < 60 ? " (short text, lower confidence)" : "");
+  } else {
+    verdict = "no detection at the 5% false-positive operating point";
+  }
   return {
-    p: p,
-    verdict: r.detect_verdict || "n/a",
+    p: p === undefined ? null : p,
+    verdict,
     flagged: flagged || artifact,
-    abstained: p === null || p === undefined,
+    abstained,
     words: r.words,
     truncated,
     language: r.language,
@@ -133,7 +149,8 @@ async function handleScore(request, env) {
   const texts = Array.isArray(body.texts) ? body.texts.slice(0, MAX_TEXTS) : [];
   if (!texts.length) return json({ ok: false, error: "no_texts" }, 400);
 
-  // Request-level word budget: trim the text list until it fits.
+  // Request-level word budget: each admitted text is clipped to its `take`
+  // so the total scored words can never exceed the budget (the CPU cap).
   let budget = MAX_WORDS_PER_REQUEST;
   const jobs = [];
   for (const t of texts) {
@@ -143,7 +160,7 @@ async function handleScore(request, env) {
     const words = text.split(/\s+/).length;
     const take = Math.min(words, budget, MAX_WORDS_PER_TEXT);
     budget -= take;
-    jobs.push({ id: String(t.id ?? jobs.length), text });
+    jobs.push({ id: String(t.id ?? jobs.length), text, take });
   }
   if (!jobs.length) return json({ ok: false, error: "no_texts" }, 400);
 
@@ -152,7 +169,7 @@ async function handleScore(request, env) {
     return json({ ok: false, error: "quota", quota: q }, 429);
   }
 
-  const results = jobs.map((j) => ({ id: j.id, ...scoreText(j.text) }));
+  const results = jobs.map((j) => ({ id: j.id, ...scoreText(j.text, j.take) }));
   return json({ ok: true, results, quota: q, dropped: texts.length - jobs.length });
 }
 
