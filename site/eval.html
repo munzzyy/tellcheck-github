@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How SlopScreen's detector is measured</title>
+  <meta name="description" content="The corpus, calibration, operating point, and honest limits behind SlopScreen's AI-text detector. Every number is reproducible." />
+  <style>
+    body { max-width: 720px; margin: 0 auto; padding: 34px 20px 72px;
+      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #1f2328; background: #fff; }
+    @media (prefers-color-scheme: dark) { body { color: #e6edf3; background: #0d1117; }
+      table { border-color: #30363d !important; } th, td { border-color: #30363d !important; }
+      code, pre { background: #161b22 !important; } }
+    h1 { font-size: 27px; letter-spacing: -0.01em; } h2 { font-size: 19px; margin-top: 32px; }
+    a { color: #1f6feb; }
+    table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 15px; }
+    th, td { border: 1px solid #d0d7de; padding: 7px 10px; text-align: left; }
+    th { background: rgba(110,119,129,.1); }
+    code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+    pre { background: #f6f8fa; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
+    .lead { font-size: 17px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <h1>How the detector is measured</h1>
+  <p class="lead">AI-text detectors have a bad reputation, mostly earned. Plenty of them
+  are black boxes that flag a nervous student's essay as a robot and offer no way to check
+  the claim. This page is the opposite: the corpus, the calibration, the operating point,
+  and the parts it gets wrong. Every number below comes from a script you can run.</p>
+
+  <h2>What it actually does</h2>
+  <p>The detector reads prose and scores how much it looks like current-model AI writing,
+  from a set of measurable features: the density of the words and stock phrases these
+  models overuse, sentence-length uniformity, connective-opener overuse, chat-UI artifacts
+  left in a paste, and a few dozen more. Those features feed a calibrated model that
+  returns a probability. It is not a vibe and it is not a language model judging another
+  language model; it is a scorer whose every input you can inspect.</p>
+
+  <h2>The corpus</h2>
+  <p>It is measured against a labeled corpus of human-written and AI-written text, held
+  separate from the data used to fit it. The human side deliberately includes the writing
+  most likely to trip a detector: formal registers, non-native English, dry technical
+  documentation. The point of stacking it that way is to measure the false-positive rate
+  honestly instead of flattering it.</p>
+
+  <h2>The numbers</h2>
+  <p>Measured on the curated corpus with the shipped calibration (reproducible, see below):</p>
+  <table>
+    <tr><th>Metric</th><th>Prose</th><th>What it means</th></tr>
+    <tr><td>AUROC</td><td>0.984</td><td>How well it ranks AI above human overall. 1.0 is perfect, 0.5 is a coin flip.</td></tr>
+    <tr><td>Caught at the 5% false-positive point</td><td>~90%</td><td>Of the AI texts, this share is flagged while only 5% of human texts would be.</td></tr>
+    <tr><td>False positives on the human corpus</td><td>0%</td><td>At the shipped operating threshold, on this curated human set.</td></tr>
+  </table>
+  <p>Source code has its own engine, measured the same way (AUROC 0.96 on a human-code set
+  stacked with the samples most likely to false-positive). SlopScreen scores the prose of
+  a PR or issue by default, because that is where the detector is strongest.</p>
+
+  <h2>The operating point, and abstention</h2>
+  <p>The detector is tuned to a 5% false-positive operating point: it would rather miss a
+  bot than accuse a person. Below roughly twenty words, or on text it reads as non-English,
+  it does not guess at all. It says it abstained and shows you why. A one-line "lgtm" gets
+  no verdict, because no honest detector can give one.</p>
+
+  <h2>What it gets wrong</h2>
+  <p>False positives are real. Heavily formal writing, some non-native English, and
+  boilerplate-heavy prose can score higher than the person who wrote them deserves. A human
+  who writes cleanly in the register these models imitate can be flagged. Here is a concrete
+  example I will not hide: text written densely about the vocabulary these models overuse
+  trips the style signals, so some of my own writing about this detector scores as
+  AI-ish. That is the failure mode, shown rather than papered over. It is exactly why every
+  result in the extension is labeled a signal at a stated false-positive rate, never proof,
+  and why the advice is always the same: judge the contribution, not the author. The
+  detector points you at text worth a second look. You do the looking.</p>
+
+  <h2>Reproduce it</h2>
+  <p>The scoring engine is the same one used here, called exactly as the extension calls
+  it. The evaluation is one command against the labeled corpus:</p>
+  <pre>python3 eval/run_eval.py</pre>
+  <p>It prints the AUROC, the catch rate at the 5% false-positive point, and the human
+  false-positive count, so the table above is not something you have to take on faith.</p>
+
+  <p style="margin-top:34px"><a href="index.html">Back to SlopScreen</a></p>
+</body>
+</html>
