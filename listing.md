@@ -34,6 +34,13 @@ Free tier: 30 scored texts a day, enough for daily maintenance of a small projec
 ## Categories
 Developer Tools
 
+## Screenshots to upload (in site/shots/)
+1. detail-light.png  - a scanned PR: flagged description with the signal panel open, clean human comment
+2. detail-dark.png   - same, dark theme
+3. list-light.png    - batch mode scoring a repo's open PR list
+4. demo.gif          - the scan in motion (AMO accepts animated screenshots)
+Lead with detail-light.png; it shows the whole value in one frame.
+
 ## Privacy policy URL
 (the site's /privacy.html once deployed)
 

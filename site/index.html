@@ -26,6 +26,10 @@
     h2 { font-size: 20px; margin-top: 36px; }
     footer { margin-top: 48px; font-size: 14px; opacity: 0.7; }
     a { color: var(--accent); }
+    figure { margin: 28px 0; }
+    figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line, #d0d7de); box-shadow: 0 6px 24px rgba(0,0,0,.12); }
+    figcaption { font-size: 13px; opacity: .7; margin-top: 8px; text-align: center; }
+    @media (prefers-color-scheme: dark) { figure img { border-color: #30363d; } }
   </style>
 </head>
 <body>
@@ -37,18 +41,21 @@
   <a class="btn" id="install" href="#">Get it for Firefox</a>
   <a class="btn ghost" href="privacy.html">Privacy policy</a>
 
-  <div class="card">
-    <span class="chip">SlopScreen: flags as AI (p 0.97)</span>
-    <p style="margin:10px 0 0; font-size:15px">31 buzzword hits (delve, leverage, seamless),
-    connective-opener overuse, unusually uniform sentence rhythm. 412 words scored.<br />
-    <em style="opacity:.7">A statistical signal at a 5% false-positive operating point, not proof.</em></p>
-  </div>
+  <figure>
+    <img src="shots/demo.gif" alt="SlopScreen scanning a pull request: a red badge flags the AI-generated description with the signals that fired, a green badge marks the human review comment as clean" loading="lazy" />
+    <figcaption>One click. Every comment scored, with the reasons shown.</figcaption>
+  </figure>
 
   <h2>Why maintainers use it</h2>
   <p>Codeberg, Godot, OpenJDK, Rust, and Ghostty all restricted AI-generated contributions
   this year, and enforcing a policy means someone has to read every submission twice. SlopScreen
   does the first read: a scan button on every PR and issue, a badge on every comment, and a
   breakdown of exactly which signals fired so you can judge for yourself.</p>
+
+  <figure>
+    <img src="shots/list-light@1x.png" alt="SlopScreen batch mode on a repository's pull request list, with a small badge next to each open PR showing its AI score" loading="lazy" />
+    <figcaption>Batch mode scores a repo's open pull requests at a glance.</figcaption>
+  </figure>
 
   <h2>Honest by design</h2>
   <p>The classifier is calibrated to a 5% false-positive operating point and abstains on text
