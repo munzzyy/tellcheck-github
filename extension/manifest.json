@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "SlopScreen",
+  "version": "0.1.0",
+  "description": "Flags likely AI-generated pull requests and issues on GitHub. A signal for maintainers, not a verdict.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "slopscreen@munzzyy.dev",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": ["websiteContent"],
+        "optional": ["technicalAndInteraction"]
+      }
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://extensionpay.com/*"],
+  "background": {
+    "scripts": ["lib/ExtPay.js", "config.js", "background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content/github.js"],
+      "css": ["content/github.css"]
+    },
+    {
+      "matches": ["https://extensionpay.com/*"],
+      "js": ["lib/ExtPay.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": { "48": "icons/icon-48.png", "96": "icons/icon-96.png" }
+  },
+  "options_ui": { "page": "options/options.html" },
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  }
+}

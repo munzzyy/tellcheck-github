@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      max-width: 560px; margin: 0; padding: 18px;
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #1f2328; background: #fff;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { color: #e6edf3; background: #0d1117; }
+      input[type=text], input[type=password] { background: #161b22; color: #e6edf3; border-color: #30363d; }
+    }
+    h1 { font-size: 16px; }
+    label { display: block; font-weight: 600; margin: 16px 0 4px; }
+    .hint { font-size: 12px; opacity: 0.75; margin: 2px 0 0; }
+    input[type=text], input[type=password] {
+      width: 100%; box-sizing: border-box; padding: 6px 8px;
+      border: 1px solid #d0d7de; border-radius: 6px; font: inherit;
+    }
+    .row { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+    #saved { color: #1a7f37; font-size: 12px; margin-left: 8px; visibility: hidden; }
+  </style>
+</head>
+<body>
+  <h1>SlopScreen options</h1>
+
+  <div class="row">
+    <input type="checkbox" id="autoScan" />
+    <label for="autoScan" style="margin:0">Scan automatically when a PR or issue page opens</label>
+  </div>
+  <p class="hint">Off by default. When off, text is sent for scoring only when you click scan.</p>
+
+  <label for="githubPat">GitHub token for batch scans (optional)</label>
+  <input type="password" id="githubPat" placeholder="github_pat_..." autocomplete="off" />
+  <p class="hint">Without one, GitHub allows about 60 batch lookups an hour per network.
+  A fine-grained token with public read access raises that to 5,000. Stored only on this
+  device, sent only to api.github.com.</p>
+
+  <label for="apiUrl">Scoring server (advanced)</label>
+  <input type="text" id="apiUrl" placeholder="leave empty for the default" />
+  <p class="hint">Only change this if you run your own SlopScreen server.</p>
+
+  <div class="row">
+    <button id="save">Save</button><span id="saved">Saved.</span>
+  </div>
+
+  <p class="hint" style="margin-top:22px">
+    What leaves your browser: the text of the PR or issue you scan, sent over HTTPS to the
+    scoring server, scored, and discarded. No accounts, no browsing history, no tracking.
+  </p>
+  <script src="options.js"></script>
+</body>
+</html>

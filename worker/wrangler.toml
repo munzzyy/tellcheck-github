@@ -1,0 +1,15 @@
+name = "slopscreen-api"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+# KV namespace for the daily scan meter. Create it once with:
+#   wrangler kv namespace create QUOTA
+# then paste the id it prints here.
+# [[kv_namespaces]]
+# binding = "QUOTA"
+# id = "PASTE_ID_HERE"
+
+[vars]
+FREE_DAILY = "30"
+PAID_DAILY = "2000"
+CEILING_DAILY = "2000"

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SlopScreen privacy policy</title>
+  <style>
+    body { max-width: 680px; margin: 0 auto; padding: 32px 20px 64px;
+      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #1f2328; background: #fff; }
+    @media (prefers-color-scheme: dark) { body { color: #e6edf3; background: #0d1117; } }
+    h1 { font-size: 26px; } h2 { font-size: 18px; margin-top: 28px; }
+    code { background: rgba(110,119,129,.18); padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>SlopScreen privacy policy</h1>
+  <p>Last updated August 28, 2026.</p>
+
+  <h2>The short version</h2>
+  <p>When you click scan, the text of the pull request or issue you are looking at is sent
+  over HTTPS to the SlopScreen scoring server, scored, and returned. It is not stored,
+  not logged in full, and not shared. That is the whole product.</p>
+
+  <h2>What is sent, and when</h2>
+  <p>Nothing is sent anywhere until you click a scan button, or turn on auto-scan in the
+  options (it ships off). A scan sends: the visible text of the PR or issue (code blocks
+  removed), and a random install id like <code>7f3a...</code> used to count your daily free
+  scans. The install id is generated on your device and is not tied to your name, GitHub
+  account, email, or anything else.</p>
+
+  <h2>What is kept</h2>
+  <p>The scoring server keeps a per-day counter per install id (deleted within 48 hours)
+  and standard short-lived infrastructure logs. Scanned text is processed in memory and
+  discarded. No database of scanned content exists.</p>
+
+  <h2>Batch scans</h2>
+  <p>Scanning a repo's open PRs calls GitHub's public API from your browser. If you add a
+  GitHub token in the options, it is stored only on your device and sent only to
+  <code>api.github.com</code>. It never touches SlopScreen's servers.</p>
+
+  <h2>Payments</h2>
+  <p>The paid tier is handled by ExtensionPay and Stripe. Your payment details go to
+  Stripe, not to SlopScreen. See their privacy policies for how they handle payment data.</p>
+
+  <h2>What SlopScreen never does</h2>
+  <p>No browsing history collection, no analytics or tracking pixels, no selling or
+  sharing of data, no reading pages other than the GitHub page you scan.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: <a href="mailto:Munzzyy1@proton.me">Munzzyy1@proton.me</a></p>
+</body>
+</html>

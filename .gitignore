@@ -1,0 +1,8 @@
+# The detector is the private asset; it is synced in at build time, never committed.
+worker/src/detector-core.js
+dist/
+node_modules/
+.wrangler/
+__pycache__/
+*.pyc
+package-lock.json
