@@ -30,10 +30,8 @@ python3 - "$KVID" <<'PY'
 import re, sys, pathlib
 kid = sys.argv[1]
 p = pathlib.Path("worker/wrangler.toml"); t = p.read_text()
-block = f'\n[[kv_namespaces]]\nbinding = "QUOTA"\nid = "{kid}"\n'
-t = re.sub(r'\n#?\s*\[\[kv_namespaces\]\][\s\S]*?id\s*=\s*"[^"]*"\n', '\n', t)
-if '[[kv_namespaces]]' not in t:
-    t = t.replace('compatibility_date', block.strip()+'\n\ncompatibility_date',1) if 'compatibility_date' in t else t+block
+t = re.sub(r'\n*\[\[kv_namespaces\]\][\s\S]*?id\s*=\s*"[^"]*"\n?', '\n', t).rstrip()
+t += f'\n\n[[kv_namespaces]]\nbinding = "QUOTA"\nid = "{kid}"\n'
 p.write_text(t); print(f"   KV id {kid} written")
 PY
 
