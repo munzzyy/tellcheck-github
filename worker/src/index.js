@@ -48,19 +48,22 @@ function truncateWords(text, maxWords) {
 }
 
 // Top human-readable signals out of a detector report, for the badge panel.
+// noslop returns hit rows as [word, count, positions] arrays (sometimes objects).
+function rowWord(row) { return Array.isArray(row) ? row[0] : (row && (row.key || row.word || row.text)) || ""; }
+function rowCount(row) { return Array.isArray(row) ? (row[1] || 1) : (row && (row.count || row.n)) || 1; }
 export function topSignals(r) {
   const out = [];
   if (r.ai_artifacts && r.ai_artifacts.length) {
-    out.push(`chat-UI artifact: ${r.ai_artifacts[0].key || r.ai_artifacts[0]}`);
+    out.push(`chat-UI artifact: ${rowWord(r.ai_artifacts[0]) || "present"}`);
   }
-  const counted = (rows, label) => {
+  const counted = (rows, one, many) => {
     if (!rows || !rows.length) return;
-    const total = rows.reduce((n, row) => n + (row.count || row.n || 1), 0);
-    const tops = rows.slice(0, 3).map((row) => row.key || row.word || row.text || "").filter(Boolean);
-    out.push(`${total} ${label}${tops.length ? ` (${tops.join(", ")})` : ""}`);
+    const total = rows.reduce((n, row) => n + rowCount(row), 0);
+    const tops = rows.slice(0, 3).map(rowWord).filter(Boolean);
+    out.push(`${total} ${total === 1 ? one : many}${tops.length ? ` (${tops.join(", ")})` : ""}`);
   };
-  counted(r.buzzwords, "buzzword hits");
-  counted(r.phrases, "stock AI phrases");
+  counted(r.buzzwords, "buzzword hit", "buzzword hits");
+  counted(r.phrases, "stock AI phrase", "stock AI phrases");
   if (r.em_dash_excess) out.push(`heavy em-dash use (${r.em_dashes} in ${r.words} words)`);
   if (r.bold_label_bullets && r.bold_label_bullets.length) out.push("bold-label bullet formatting");
   if (r.connective_excess) out.push("connective-opener overuse (moreover/furthermore/additionally)");
