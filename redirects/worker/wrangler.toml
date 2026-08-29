@@ -1,0 +1,6 @@
+# Deploy this OVER the old "slopscreen-api" worker (same name = same
+# Cloudflare Worker, so this replaces its code instead of creating a second
+# worker). Its only job is a 301 to the new tellcheck-github worker.
+name = "slopscreen-api"
+main = "index.js"
+compatibility_date = "2026-08-01"

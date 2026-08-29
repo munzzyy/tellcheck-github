@@ -1,4 +1,4 @@
-// SlopScreen content script for github.com.
+// Tellcheck for GitHub content script for github.com.
 //
 // Draws the scan button on PR/issue pages and badges each scored block. No
 // text leaves the page until the user clicks scan (unless auto-scan was
@@ -8,7 +8,7 @@
 
 (function () {
   const api = globalThis.browser ?? globalThis.chrome;
-  const NS = "slopscreen";
+  const NS = "tellcheck";
 
   // ---------- routing ----------
 
@@ -105,16 +105,16 @@
       // An artifact hit can be flagged and p-less; the flag wins the chip.
       cls = "flag";
       label = result.p === null || result.p === undefined
-        ? "SlopScreen: flags as AI (chat artifact)"
-        : `SlopScreen: flags as AI (p ${result.p})`;
+        ? "Tellcheck: flags as AI (chat artifact)"
+        : `Tellcheck: flags as AI (p ${result.p})`;
     } else if (result.abstained) {
       cls = "abstain";
       label = result.language && result.language !== "en"
-        ? "SlopScreen: not scored (English only)"
-        : "SlopScreen: too short to judge";
+        ? "Tellcheck: not scored (English only)"
+        : "Tellcheck: too short to judge";
     } else {
       cls = "clean";
-      label = "SlopScreen: no AI detection";
+      label = "Tellcheck: no AI detection";
     }
     const chip = el("button", `${NS}-chip ${NS}-${cls}`, label);
     chip.type = "button";
@@ -122,7 +122,7 @@
   }
 
   function notScoredChip() {
-    const chip = el("span", `${NS}-chip ${NS}-abstain`, "SlopScreen: not scored (scan limit)");
+    const chip = el("span", `${NS}-chip ${NS}-abstain`, "Tellcheck: not scored (scan limit)");
     chip.title = "This block was over the per-scan limit. Scan again to cover the rest.";
     return chip;
   }

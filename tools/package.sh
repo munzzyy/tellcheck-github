@@ -1,5 +1,5 @@
 #!/bin/bash
-# Package the extension for AMO submission: dist/slopscreen-<version>.zip
+# Package the extension for AMO submission: dist/tellcheck-github-<version>.zip
 # Runs web-ext lint first when available (npx --no-install web-ext).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -14,7 +14,7 @@ else
   echo "(web-ext not installed, skipping lint)"
 fi
 
-OUT="dist/slopscreen-${VERSION}.zip"
+OUT="dist/tellcheck-github-${VERSION}.zip"
 rm -f "$OUT"
 python3 - "$OUT" <<'PY'
 import pathlib, sys, zipfile

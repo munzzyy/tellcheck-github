@@ -1,5 +1,5 @@
 #!/bin/bash
-# One-command deploy for SlopScreen's backend + landing site. Idempotent.
+# One-command deploy for Tellcheck for GitHub's backend + landing site. Idempotent.
 # Needs CLOUDFLARE_API_TOKEN (Workers Scripts:Edit, Workers KV:Edit, Pages:Edit)
 # or a prior `wrangler login`.
 #
@@ -7,9 +7,10 @@
 #
 # This does NOT submit the extension to AMO (that needs your Mozilla account) and
 # does NOT touch payments (v0.1 ships free). After deploy, the extension zip is
-# rebuilt against the live worker URL; upload dist/slopscreen-*.zip to AMO.
+# rebuilt against the live worker URL; upload dist/tellcheck-github-*.zip to AMO.
 set -euo pipefail
 cd "$(dirname "$0")"
+PAGES=tellcheck-github
 W=(npx --yes wrangler@latest)
 
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] && ! "${W[@]}" whoami >/dev/null 2>&1; then
@@ -49,11 +50,11 @@ PY
 fi
 
 echo "== 4/5 Pages project =="
-"${W[@]}" pages project list 2>/dev/null | grep -q slopscreen || "${W[@]}" pages project create slopscreen --production-branch=main
+"${W[@]}" pages project list 2>/dev/null | grep -q "$PAGES" || "${W[@]}" pages project create "$PAGES" --production-branch=main
 
 echo "== 5/5 deploy site =="
-"${W[@]}" pages deploy site --project-name=slopscreen --branch=main
+"${W[@]}" pages deploy site --project-name="$PAGES" --branch=main
 
 echo
-echo "DONE. Worker: ${URL:-<above>}   Site: https://slopscreen.pages.dev"
-echo "Next (yours): submit dist/slopscreen-*.zip to addons.mozilla.org (see listing.md)."
+echo "DONE. Worker: ${URL:-<above>}   Site: https://$PAGES.pages.dev"
+echo "Next (yours): submit dist/tellcheck-github-*.zip to addons.mozilla.org (see listing.md)."

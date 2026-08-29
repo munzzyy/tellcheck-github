@@ -3,16 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>How SlopScreen's detector is measured</title>
-  <meta name="description" content="The corpus, calibration, operating point, and honest limits behind SlopScreen's AI-text detector. Every number is reproducible." />
+  <title>How Tellcheck for GitHub's detector is measured</title>
+  <meta name="description" content="The corpus, calibration, operating point, and honest limits behind Tellcheck for GitHub's AI-text detector. Every number is reproducible." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="How Tellcheck for GitHub's detector is measured" />
+  <meta property="og:description" content="The corpus, calibration, operating point, and honest limits behind the detector. Every number is reproducible." />
+  <meta property="og:url" content="https://tellcheck-github.pages.dev/eval.html" />
+  <meta property="og:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="How Tellcheck for GitHub's detector is measured" />
+  <meta name="twitter:description" content="The corpus, calibration, operating point, and honest limits behind the detector." />
+  <meta name="twitter:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
   <style>
-    body { max-width: 720px; margin: 0 auto; padding: 34px 20px 72px;
+    body { max-width: 720px; margin: 0 auto; padding: 0 20px 72px;
       font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       color: #1f2328; background: #fff; }
     @media (prefers-color-scheme: dark) { body { color: #e6edf3; background: #0d1117; }
       table { border-color: #30363d !important; } th, td { border-color: #30363d !important; }
-      code, pre { background: #161b22 !important; } }
-    h1 { font-size: 27px; letter-spacing: -0.01em; } h2 { font-size: 19px; margin-top: 32px; }
+      code, pre { background: #161b22 !important; } .tc-header { border-color: #30363d !important; } }
+    h1 { font-size: 27px; letter-spacing: -0.01em; margin-top: 34px; } h2 { font-size: 19px; margin-top: 32px; }
     a { color: #1f6feb; }
     table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 15px; }
     th, td { border: 1px solid #d0d7de; padding: 7px 10px; text-align: left; }
@@ -20,9 +29,21 @@
     code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 14px; }
     pre { background: #f6f8fa; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
     .lead { font-size: 17px; opacity: 0.9; }
+    .tc-header { display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0; border-bottom: 1px solid #d0d7de; margin-bottom: 8px; }
+    .tc-wordmark { font-weight: 700; letter-spacing: -0.02em; text-decoration: none; color: inherit; font-size: 16px; }
+    .tc-wordmark b { color: #1f6feb; }
+    .tc-wordmark .tc-sub { font-weight: 400; opacity: 0.6; font-size: 13px; }
+    .tc-nav a { margin-left: 16px; font-size: 14px; color: inherit; opacity: 0.75; text-decoration: none; }
+    .tc-nav a:hover { opacity: 1; text-decoration: underline; }
   </style>
 </head>
 <body>
+  <header class="tc-header">
+    <a class="tc-wordmark" href="index.html"><b>Tell</b>check <span class="tc-sub">for GitHub</span></a>
+    <nav class="tc-nav"><a href="index.html">Home</a><a href="privacy.html">Privacy</a><a href="https://tellcheck.pages.dev">Tellcheck API</a></nav>
+  </header>
+
   <h1>How the detector is measured</h1>
   <p class="lead">AI-text detectors have a bad reputation, mostly earned. Plenty of them
   are black boxes that flag a nervous student's essay as a robot and offer no way to check
@@ -53,8 +74,8 @@
     <tr><td>False positives on the human corpus</td><td>0%</td><td>At the shipped operating threshold, on this curated human set.</td></tr>
   </table>
   <p>Source code has its own engine, measured the same way (AUROC 0.96 on a human-code set
-  stacked with the samples most likely to false-positive). SlopScreen scores the prose of
-  a PR or issue by default, because that is where the detector is strongest.</p>
+  stacked with the samples most likely to false-positive). Tellcheck for GitHub scores the
+  prose of a PR or issue by default, because that is where the detector is strongest.</p>
 
   <h2>The operating point, and abstention</h2>
   <p>The detector is tuned to a 5% false-positive operating point: it would rather miss a
@@ -80,6 +101,6 @@
   <p>It prints the AUROC, the catch rate at the 5% false-positive point, and the human
   false-positive count, so the table above is not something you have to take on faith.</p>
 
-  <p style="margin-top:34px"><a href="index.html">Back to SlopScreen</a></p>
+  <p style="margin-top:34px"><a href="index.html">Back to Tellcheck for GitHub</a></p>
 </body>
 </html>

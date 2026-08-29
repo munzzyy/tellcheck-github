@@ -99,11 +99,11 @@ def detail_fixture(dark, open_panel, do_scan=True):
     else:
         trigger = """
           setTimeout(() => {
-            const fab = document.getElementById("slopscreen-fab");
+            const fab = document.getElementById("tellcheck-fab");
             if (fab) fab.click();
             %s
           }, 150);
-        """ % ('setTimeout(() => { const c = document.querySelector(".slopscreen-flag"); if (c) c.click(); }, 550);' if open_panel else '')
+        """ % ('setTimeout(() => { const c = document.querySelector(".tellcheck-flag"); if (c) c.click(); }, 550);' if open_panel else '')
     return f"""<!doctype html><html data-color-mode="{mode}"><head><meta charset="utf-8">
 <style>{PAGE_CSS}{CONTENT_CSS}</style></head><body><div class="wrap">
 <h1 class="prtitle">Improve config parser <span class="num">#4823</span></h1>
@@ -134,14 +134,14 @@ def list_fixture(dark):
     for r in LIST_RESULTS:
         rows += (f'<div class="listrow"><span class="ic">&#9737;</span>'
                  f'<a href="/o/r/pull/{r["n"]}">{r["title"]}</a>'
-                 f'<span class="slopscreen-mini slopscreen-{r["cls"]}">{r["txt"]}</span>'
+                 f'<span class="tellcheck-mini tellcheck-{r["cls"]}">{r["txt"]}</span>'
                  f'<div style="flex:1"></div></div>'
                  f'<div class="listmeta">#{r["n"]} opened by contributor</div>')
     return f"""<!doctype html><html data-color-mode="{mode}"><head><meta charset="utf-8">
 <style>{PAGE_CSS}{CONTENT_CSS}</style></head><body><div class="wrap">
 <h1 class="prtitle" style="font-size:20px">Pull requests</h1>
 <div class="prmeta">5 open</div>{rows}
-<button class="slopscreen-fab">2 flagged of 5. Rescan</button>
+<button class="tellcheck-fab">2 flagged of 5. Rescan</button>
 </div></body></html>"""
 
 def shoot(html, out, path="/quietriver/config/pull/4823", w=980, h=760, wait=2500):

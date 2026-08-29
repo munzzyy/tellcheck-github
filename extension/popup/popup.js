@@ -50,7 +50,7 @@ async function wireCsv() {
     }
     const a = document.createElement("a");
     a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(lines.join("\n"));
-    a.download = `slopscreen-${lastBatch.owner}-${lastBatch.repo}.csv`;
+    a.download = `tellcheck-${lastBatch.owner}-${lastBatch.repo}.csv`;
     a.click();
   };
 }

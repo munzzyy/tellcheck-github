@@ -1,7 +1,7 @@
-// SlopScreen background (Firefox MV3 event page).
+// Tellcheck for GitHub background (Firefox MV3 event page).
 //
-// All network traffic happens here: scoring calls to the SlopScreen API and
-// the optional batch fetch from GitHub's public API. Content scripts only
+// All network traffic happens here: scoring calls to Tellcheck for GitHub's
+// worker and the optional batch fetch from GitHub's public API. Content scripts only
 // read the page and draw badges. Page text leaves the browser ONLY when the
 // user clicks scan (or turns auto-scan on in options).
 //
@@ -9,14 +9,14 @@
 // manifest, so every ExtPay touchpoint is guarded on typeof. Enabling
 // payments later = set EXTPAY_ID, re-add the lib + extensionpay.com entries
 // to the manifest (see README).
-/* global ExtPay, SLOPSCREEN */
+/* global ExtPay, TELLCHECK */
 "use strict";
 
 const api = globalThis.browser ?? globalThis.chrome;
-const extpayAvailable = () => SLOPSCREEN.EXTPAY_ID && typeof ExtPay !== "undefined";
+const extpayAvailable = () => TELLCHECK.EXTPAY_ID && typeof ExtPay !== "undefined";
 
 if (extpayAvailable()) {
-  ExtPay(SLOPSCREEN.EXTPAY_ID).startBackground();
+  ExtPay(TELLCHECK.EXTPAY_ID).startBackground();
 }
 
 // The meter id rotates at UTC midnight, matching the daily quota exactly.
@@ -33,7 +33,7 @@ async function getMeterId() {
 async function getSettings() {
   const got = await api.storage.local.get(["apiUrl", "githubPat", "autoScan"]);
   return {
-    apiUrl: (got.apiUrl || SLOPSCREEN.API_URL).replace(/\/+$/, ""),
+    apiUrl: (got.apiUrl || TELLCHECK.API_URL).replace(/\/+$/, ""),
     githubPat: got.githubPat || "",
     autoScan: !!got.autoScan,
   };
@@ -45,7 +45,7 @@ async function getSettings() {
 async function paidStatus() {
   if (!extpayAvailable()) return { configured: false, paid: false };
   try {
-    const user = await ExtPay(SLOPSCREEN.EXTPAY_ID).getUser();
+    const user = await ExtPay(TELLCHECK.EXTPAY_ID).getUser();
     const paid = !!user.paid;
     await api.storage.local.set({ paidCache: { paid, at: Date.now() } });
     return { configured: true, paid };
@@ -134,7 +134,7 @@ api.runtime.onMessage.addListener((msg) => {
     case "settings":
       return getSettings();
     case "open-payment":
-      if (extpayAvailable()) ExtPay(SLOPSCREEN.EXTPAY_ID).openPaymentPage();
+      if (extpayAvailable()) ExtPay(TELLCHECK.EXTPAY_ID).openPaymentPage();
       return Promise.resolve({ ok: true });
     default:
       return undefined;

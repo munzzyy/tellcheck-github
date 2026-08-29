@@ -1,4 +1,4 @@
-# SlopScreen
+# Tellcheck for GitHub
 
 Browser extension that flags likely AI-generated pull requests and issues on GitHub,
 for maintainers enforcing no-AI or disclosure policies. The classifier (the noslop
@@ -24,8 +24,9 @@ test/               worker test suite (node --test)
 
 ```
 python3 tools/sync_detector.py        # pull the private detector into the worker
-node --test test/worker.test.mjs      # 11 tests, no network needed
-bash tools/package.sh                 # lint + build dist/slopscreen-x.y.z.zip
+node --test test/worker.test.mjs      # 14 tests, no network needed
+python3 test/content_smoke.py         # headless DOM smoke test (needs chromium)
+bash tools/package.sh                 # lint + build dist/tellcheck-github-x.y.z.zip
 ```
 
 Load the extension for manual testing: Firefox -> about:debugging -> This Firefox ->
@@ -40,6 +41,13 @@ wrangler deploy                       # prints the live URL
 ```
 
 Put the live URL into extension/config.js API_URL if it differs from the default.
+
+## Domain and cutover
+
+Buy `tellcheck.dev` when ready (a subdomain of it, or a Pages custom domain, can replace
+`tellcheck-github.pages.dev` with a one-line edit to `extension/config.js` and the site).
+`redirects/` holds a stub worker and a `_redirects` file that 301 the old `slopscreen-api`
+worker and `slopscreen.pages.dev` site to the new addresses; see `redirects/README.md`.
 
 ## Monetization
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the SlopScreen icon: a screen (sieve) mark, blue on transparent.
+"""Draw the Tellcheck for GitHub icon: a screen (sieve) mark, blue on transparent.
 
   python3 tools/gen_icons.py
 """

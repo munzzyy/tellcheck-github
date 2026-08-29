@@ -77,7 +77,7 @@ FIXTURE = f"""<!doctype html>
 <script>{CONTENT_JS}</script>
 <script>
   setTimeout(() => {{
-    const fab = document.getElementById("slopscreen-fab");
+    const fab = document.getElementById("tellcheck-fab");
     if (fab) fab.click();
     setTimeout(() => {{
       const out = document.createElement("div");
@@ -114,17 +114,17 @@ def main():
     url = f"http://127.0.0.1:{port}/someowner/somerepo/pull/1"
     dom = subprocess.run(
         ["chromium", "--headless=new", "--disable-gpu", "--no-sandbox",
-         f"--user-data-dir=/tmp/claude-1000/slopscreen-smoke-profile",
+         f"--user-data-dir=/tmp/claude-1000/tellcheck-github-smoke-profile",
          "--virtual-time-budget=4000", "--dump-dom", url],
         capture_output=True, text=True, timeout=60,
     ).stdout
     httpd.shutdown()
 
     checks = [
-        ("fab rendered", 'id="slopscreen-fab"' in dom),
-        ("flag chip on AI comment", "slopscreen-flag" in dom and "flags as AI (p 0.97)" in dom),
-        ("clean chip on human comment", "slopscreen-clean" in dom and "no AI detection" in dom),
-        ("abstain chip on short comment", "slopscreen-abstain" in dom and "too short to judge" in dom),
+        ("fab rendered", 'id="tellcheck-fab"' in dom),
+        ("flag chip on AI comment", "tellcheck-flag" in dom and "flags as AI (p 0.97)" in dom),
+        ("clean chip on human comment", "tellcheck-clean" in dom and "no AI detection" in dom),
+        ("abstain chip on short comment", "tellcheck-abstain" in dom and "too short to judge" in dom),
         ("English-only abstain labeled honestly", "not scored (English only)" in dom),
         ("dropped block gets a not-scored chip", "not scored (scan limit)" in dom),
         ("signal panel present", "31 buzzword hits" in dom),

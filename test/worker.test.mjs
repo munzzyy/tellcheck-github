@@ -14,7 +14,7 @@ function mockKV(store = new Map()) {
 }
 
 function req(body, path = "/score") {
-  return new Request(`https://slopscreen.example${path}`, {
+  return new Request(`https://tellcheck-github.example${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

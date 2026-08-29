@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SlopScreen: catch AI-generated pull requests</title>
+  <title>Tellcheck for GitHub: catch AI-generated pull requests</title>
   <meta name="description" content="A browser extension that flags likely AI-generated pull requests and issues on GitHub. Built for maintainers drowning in AI slop." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Tellcheck for GitHub: catch AI-generated pull requests" />
+  <meta property="og:description" content="A browser extension that flags likely AI-generated pull requests and issues on GitHub, right on the page. One click, comments scored, reasons shown." />
+  <meta property="og:url" content="https://tellcheck-github.pages.dev/" />
+  <meta property="og:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Tellcheck for GitHub: catch AI-generated pull requests" />
+  <meta name="twitter:description" content="A browser extension that flags likely AI-generated pull requests and issues on GitHub, right on the page." />
+  <meta name="twitter:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
   <style>
     :root { --accent: #1f6feb; --flag: #d1242f; }
-    body { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px;
+    body { max-width: 720px; margin: 0 auto; padding: 0 20px 80px;
       font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       color: #1f2328; background: #fff; }
     @media (prefers-color-scheme: dark) {
       body { color: #e6edf3; background: #0d1117; }
       .card { background: #161b22 !important; border-color: #30363d !important; }
+      .tc-header { border-color: #30363d !important; }
     }
-    h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.15; letter-spacing: -0.02em; }
+    h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.15; letter-spacing: -0.02em; margin-top: 40px; }
     .lede { font-size: 19px; opacity: 0.85; }
     .btn { display: inline-block; margin: 18px 12px 0 0; padding: 11px 22px; border-radius: 8px;
       background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; }
     .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .btn.disabled { background: transparent; color: inherit; opacity: 0.6; border: 1px solid currentColor;
+      cursor: default; pointer-events: none; }
     .card { border: 1px solid #d0d7de; border-radius: 10px; background: #f6f8fa;
       padding: 16px 20px; margin: 26px 0; }
     .chip { display: inline-block; padding: 3px 10px; border-radius: 999px;
@@ -30,30 +42,42 @@
     figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line, #d0d7de); box-shadow: 0 6px 24px rgba(0,0,0,.12); }
     figcaption { font-size: 13px; opacity: .7; margin-top: 8px; text-align: center; }
     @media (prefers-color-scheme: dark) { figure img { border-color: #30363d; } }
+    .tc-header { display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0; border-bottom: 1px solid #d0d7de; margin-bottom: 8px; }
+    .tc-wordmark { font-weight: 700; letter-spacing: -0.02em; text-decoration: none; color: inherit; font-size: 16px; }
+    .tc-wordmark b { color: var(--accent); }
+    .tc-wordmark .tc-sub { font-weight: 400; opacity: 0.6; font-size: 13px; }
+    .tc-nav a { margin-left: 16px; font-size: 14px; color: inherit; opacity: 0.75; text-decoration: none; }
+    .tc-nav a:hover { opacity: 1; text-decoration: underline; }
   </style>
 </head>
 <body>
+  <header class="tc-header">
+    <a class="tc-wordmark" href="index.html"><b>Tell</b>check <span class="tc-sub">for GitHub</span></a>
+    <nav class="tc-nav"><a href="eval.html">How it's measured</a><a href="privacy.html">Privacy</a><a href="https://tellcheck.pages.dev">Tellcheck API</a></nav>
+  </header>
+
   <h1>Your issue tracker is filling with AI slop.<br />Screen it.</h1>
-  <p class="lede">SlopScreen flags likely AI-generated pull requests and issues on GitHub,
-  right on the page. One click, comments scored, reasons shown. Built for maintainers
+  <p class="lede">Tellcheck for GitHub flags likely AI-generated pull requests and issues on
+  GitHub, right on the page. One click, comments scored, reasons shown. Built for maintainers
   who read contributions for a living and are tired of burning review time on generated ones.</p>
 
-  <a class="btn" id="install" href="#">Get it for Firefox</a>
+  <a class="btn disabled" href="#" aria-disabled="true" onclick="return false;" title="Under review with Mozilla; check back soon.">Coming soon: Firefox add-on under AMO review</a>
   <a class="btn ghost" href="privacy.html">Privacy policy</a>
 
   <figure>
-    <img src="shots/demo.gif" alt="SlopScreen scanning a pull request: a red badge flags the AI-generated description with the signals that fired, a green badge marks the human review comment as clean" loading="lazy" />
+    <img src="shots/demo.gif" alt="Tellcheck for GitHub scanning a pull request: a red badge flags the AI-generated description with the signals that fired, a green badge marks the human review comment as clean" loading="lazy" />
     <figcaption>One click. Every comment scored, with the reasons shown.</figcaption>
   </figure>
 
   <h2>Why maintainers use it</h2>
   <p>Codeberg, Godot, OpenJDK, Rust, and Ghostty all restricted AI-generated contributions
-  this year, and enforcing a policy means someone has to read every submission twice. SlopScreen
-  does the first read: a scan button on every PR and issue, a badge on every comment, and a
-  breakdown of exactly which signals fired so you can judge for yourself.</p>
+  this year, and enforcing a policy means someone has to read every submission twice. Tellcheck
+  for GitHub does the first read: a scan button on every PR and issue, a badge on every comment,
+  and a breakdown of exactly which signals fired so you can judge for yourself.</p>
 
   <figure>
-    <img src="shots/list-light@1x.png" alt="SlopScreen batch mode on a repository's pull request list, with a small badge next to each open PR showing its AI score" loading="lazy" />
+    <img src="shots/list-light@1x.png" alt="Tellcheck for GitHub batch mode on a repository's pull request list, with a small badge next to each open PR showing its AI score" loading="lazy" />
     <figcaption>Batch mode scores a repo's open pull requests at a glance.</figcaption>
   </figure>
 
@@ -64,10 +88,19 @@
   The corpus, the calibration, and what it gets wrong are all written up on the
   <a href="eval.html">measurement page</a>, with a command to reproduce the numbers.</p>
 
+  <h2>Pricing</h2>
+  <p>Free, with a cap of 30 scored texts a day per install. No account, no signup. There is
+  no paid tier yet; if one ships later, this page and the extension will say so before it
+  changes anything for you.</p>
+
   <h2>Private by design</h2>
   <p>Nothing leaves your browser until you click scan. Scanned text is scored and discarded,
   never stored. No accounts, no tracking. <a href="privacy.html">The whole policy</a> fits on
   one page.</p>
+
+  <h2>More from Tellcheck</h2>
+  <p>The same detector is also available as a metered HTTP API for scoring text anywhere,
+  not just on GitHub: <a href="https://tellcheck.pages.dev">Tellcheck API</a>.</p>
 
   <footer>
     <p>Made by <a href="https://github.com/munzzyy">munzzyy</a>. Questions:

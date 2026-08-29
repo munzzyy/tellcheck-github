@@ -1,7 +1,7 @@
 # AMO listing copy (paste at submission)
 
 ## Name
-SlopScreen
+Tellcheck for GitHub
 
 ## Summary (250 chars max)
 Flags likely AI-generated pull requests and issues on GitHub. One click scores every
@@ -13,12 +13,12 @@ Your issue tracker is filling with AI slop. Codeberg, Godot, OpenJDK, Rust, and 
 all restricted AI-generated contributions this year. Enforcing a policy means a human
 has to read every submission twice.
 
-SlopScreen does the first read. On any GitHub pull request or issue, click scan. The
-description and comments get badges saying whether the text statistically reads as
-AI-generated. Each badge opens a breakdown of the exact signals that fired: buzzword
-density, stock phrases, uniform sentence rhythm, chat-UI artifacts, and more. On a
-repo's pull request list, scan the 20 most recent open PRs in one click. Anything over
-a scan's limit is labeled "not scored", never silently skipped.
+Tellcheck for GitHub does the first read. On any GitHub pull request or issue, click
+scan. The description and comments get badges saying whether the text statistically
+reads as AI-generated. Each badge opens a breakdown of the exact signals that fired:
+buzzword density, stock phrases, uniform sentence rhythm, chat-UI artifacts, and more.
+On a repo's pull request list, scan the 20 most recent open PRs in one click. Anything
+over a scan's limit is labeled "not scored", never silently skipped.
 
 Honest by design. The classifier runs at a 5% false-positive operating point, abstains
 on text too short to judge, and every result is labeled a signal rather than proof.
@@ -29,7 +29,7 @@ Private by design. Nothing leaves your browser until you click scan (auto-scan e
 ships off). Scanned text is scored over HTTPS and discarded, never stored. No accounts,
 no tracking. Optional GitHub token for batch scans stays on your device.
 
-Free tier: 30 scored texts a day, enough for daily maintenance of a small project.
+Free, with a cap of 30 scored texts a day per install. No account, no paid tier yet.
 
 ## Categories
 Developer Tools

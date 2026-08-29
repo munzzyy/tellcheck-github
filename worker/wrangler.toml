@@ -1,11 +1,11 @@
-name = "slopscreen-api"
+name = "tellcheck-github"
 main = "src/index.js"
 compatibility_date = "2026-08-01"
 
 # KV namespace for the daily scan meter. Create it once with:
 #   wrangler kv namespace create QUOTA
 # then paste the id it prints here.
-# 
+#
 
 [vars]
 FREE_DAILY = "30"

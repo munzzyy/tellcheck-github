@@ -1,0 +1,4 @@
+# Deploy this file ALONE as the "slopscreen" Pages project's site content
+# once tellcheck-github.pages.dev is live. Cloudflare Pages reads _redirects
+# from the deployed root, so every path 301s to the same path on the new site.
+/*  https://tellcheck-github.pages.dev/:splat  301

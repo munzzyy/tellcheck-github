@@ -1,4 +1,4 @@
-// SlopScreen scoring API. Runs on Cloudflare Workers.
+// Tellcheck for GitHub scoring API. Runs on Cloudflare Workers.
 //
 // The detector (Cole's noslop engine) lives server-side only; the extension is
 // a thin client. One route does the work:
@@ -181,7 +181,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
     if (url.pathname === "/health") {
-      return json({ ok: true, service: "slopscreen", detector: !!Noslop });
+      return json({ ok: true, service: "tellcheck-github", detector: !!Noslop });
     }
     if (url.pathname === "/score" && request.method === "POST") {
       return handleScore(request, env);
