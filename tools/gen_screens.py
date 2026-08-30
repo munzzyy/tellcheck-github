@@ -15,6 +15,8 @@ import pathlib
 import subprocess
 import threading
 
+from PIL import Image, ImageChops
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CONTENT_JS = (ROOT / "extension" / "content" / "github.js").read_text()
 CONTENT_CSS = (ROOT / "extension" / "content" / "github.css").read_text()
@@ -144,9 +146,38 @@ def list_fixture(dark):
 <button class="tellcheck-fab">2 flagged of 5. Rescan</button>
 </div></body></html>"""
 
-def shoot(html, out, path="/quietriver/config/pull/4823", w=980, h=760, wait=2500):
+def content_box(img, pad=48):
+    """Bounding box of the real content inside a screenshot, padded a bit.
+    Drops the empty chrome a fixed window size always leaves around
+    variable-height content, so the same badge/signal text reads bigger
+    once the image is squeezed into a phone-width <img>."""
+    bg = Image.new("RGB", img.size, img.getpixel((0, 0)))
+    diff = ImageChops.difference(img, bg)
+    bbox = diff.getbbox()
+    if not bbox:
+        return (0, 0, img.width, img.height)
+    left, top, right, bottom = bbox
+    left = max(0, left - pad)
+    top = max(0, top - pad)
+    right = min(img.width, right + pad)
+    bottom = min(img.height, bottom + pad)
+    return (left, top, right, bottom)
+
+
+def autocrop(path, box=None, pad=48):
+    """Crop a screenshot to its own content box, or to a caller-supplied box
+    (used to keep every frame of the demo gif aligned to one canvas)."""
+    img = Image.open(path).convert("RGB")
+    box = box or content_box(img, pad)
+    img.crop(box).save(path)
+    return box
+
+
+def shoot(html, out, path="/quietriver/config/pull/4823", w=980, h=760, wait=2500, crop_box=None):
     """Serve the fixture at a GitHub-shaped path so the content script's route
-    matcher fires, then screenshot it."""
+    matcher fires, then screenshot it, then crop the outer chrome away.
+    Returns the crop box actually used, so a caller can reuse it for a
+    matching frame."""
     body = html.encode()
 
     class H(http.server.BaseHTTPRequestHandler):
@@ -171,7 +202,11 @@ def shoot(html, out, path="/quietriver/config/pull/4823", w=980, h=760, wait=250
          f"http://127.0.0.1:{port}{path}"],
         capture_output=True, timeout=60)
     srv.shutdown()
-    print("wrote", pathlib.Path(out).relative_to(ROOT))
+    used_box = autocrop(out, box=crop_box)
+    with Image.open(out) as img:
+        size = img.size
+    print("wrote", pathlib.Path(out).relative_to(ROOT), size)
+    return used_box
 
 
 def make_gif():
@@ -202,12 +237,18 @@ def make_gif():
 
 
 def main():
-    shoot(detail_fixture(dark=False, open_panel=True), str(OUT / "detail-light.png"))
+    # detail-light is both the standalone hero shot and the tallest gif frame
+    # (panel open); reuse its crop box for the other two frames so the three
+    # line up on one canvas instead of jumping size mid-animation.
+    box = shoot(detail_fixture(dark=False, open_panel=True), str(OUT / "detail-light.png"))
     shoot(detail_fixture(dark=True, open_panel=True), str(OUT / "detail-dark.png"))
-    shoot(detail_fixture(dark=False, open_panel=False), str(OUT / "detail-badges.png"))
-    shoot(detail_fixture(dark=False, open_panel=False, do_scan=False), str(OUT / "detail-plain.png"))
-    shoot(list_fixture(dark=False), str(OUT / "list-light.png"), h=560)
-    shoot(list_fixture(dark=True), str(OUT / "list-dark.png"), h=560)
+    shoot(detail_fixture(dark=False, open_panel=False), str(OUT / "detail-badges.png"), crop_box=box)
+    shoot(detail_fixture(dark=False, open_panel=False, do_scan=False), str(OUT / "detail-plain.png"), crop_box=box)
+    # Window height close to the 5-row list's real content height. The fab
+    # button is position:fixed to the viewport bottom, so a tall window
+    # drags a huge dead strip of whitespace into the autocrop bbox.
+    shoot(list_fixture(dark=False), str(OUT / "list-light.png"), h=440)
+    shoot(list_fixture(dark=True), str(OUT / "list-dark.png"), h=440)
     make_gif()
 
 
