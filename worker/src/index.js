@@ -7,25 +7,34 @@
 //     -> { ok, results: [{ id, p, verdict, flagged, words, truncated,
 //                          score_per_1k, signals }], quota }
 //
-// Free quota is metered per install id per UTC day in KV. If KV is missing or
-// over its own limits the meter degrades OPEN on purpose: scoring keeps
-// working and the response says meter:"degraded" instead of silently lying
-// about enforcement. A paywall outage should cost pennies, not break users.
+// Free quota is metered per install id AND per source IP per UTC day in KV.
+// The install id alone is trivial to rotate, so a coarse IP cap sits behind
+// it as a backstop; either ceiling being hit blocks the request. If KV is
+// missing or over its own limits the meter degrades OPEN on purpose: scoring
+// keeps working and the response says meter:"degraded" instead of silently
+// lying about enforcement. A metering outage should cost pennies, not break
+// users.
+//
+// There is no paid tier wired up (no server can verify an ExtensionPay
+// claim without a paid API we don't have), so the worker does not read or
+// trust any client-asserted paid flag. Everyone gets the same free cap.
 //
 // CPU budget: the detector costs ~1ms per 200 words. Texts are truncated at
 // MAX_WORDS_PER_TEXT and each request is capped at MAX_WORDS_PER_REQUEST so a
-// request stays inside the free plan's CPU allowance.
+// request stays inside the free plan's CPU allowance. A whitespace-free blob
+// tokenizes as ~1 "word", so MAX_CHARS_PER_TEXT bounds raw length too, ahead
+// of any word-count math.
 import Noslop from "./detector-core.js";
 
 const MAX_TEXTS = 25;
 const MAX_WORDS_PER_TEXT = 1500;
 const MAX_WORDS_PER_REQUEST = 2000;
+const MAX_CHARS_PER_TEXT = 12000; // ~1500 words at a generous 8 chars/word
 const MAX_BODY_BYTES = 512 * 1024;
 
 const DEFAULTS = {
-  FREE_DAILY: 30,      // scored texts per install per day
-  PAID_DAILY: 2000,    // ExtensionPay has no server-side validation API, so a
-  CEILING_DAILY: 2000, // paid claim is client-asserted; the ceiling bounds abuse.
+  FREE_DAILY: 30,   // scored texts per install per day
+  IP_DAILY: 300,    // coarser backstop per source IP; blunts install-id rotation
 };
 
 const CORS = {
@@ -42,9 +51,20 @@ function json(body, status = 200) {
 }
 
 function truncateWords(text, maxWords) {
-  const words = text.split(/\s+/);
-  if (words.length <= maxWords) return [text, false];
-  return [words.slice(0, maxWords).join(" "), true];
+  // Hard character cap first: a huge blob with no whitespace splits into a
+  // single "word" and would otherwise sail past every word-count budget.
+  let clipped = text;
+  let truncated = false;
+  if (clipped.length > MAX_CHARS_PER_TEXT) {
+    clipped = clipped.slice(0, MAX_CHARS_PER_TEXT);
+    truncated = true;
+  }
+  const words = clipped.split(/\s+/);
+  if (words.length > maxWords) {
+    clipped = words.slice(0, maxWords).join(" ");
+    truncated = true;
+  }
+  return [clipped, truncated];
 }
 
 // Top human-readable signals out of a detector report, for the badge panel.
@@ -109,27 +129,31 @@ export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT) {
   };
 }
 
-async function meter(env, install, count, paidClaim) {
-  const limitFree = Number(env.FREE_DAILY) || DEFAULTS.FREE_DAILY;
-  const limitPaid = Number(env.PAID_DAILY) || DEFAULTS.PAID_DAILY;
-  const ceiling = Number(env.CEILING_DAILY) || DEFAULTS.CEILING_DAILY;
-  const limit = paidClaim ? limitPaid : limitFree;
+async function meter(env, install, ip, count) {
+  const limit = Number(env.FREE_DAILY) || DEFAULTS.FREE_DAILY;
+  const ipLimit = Number(env.IP_DAILY) || DEFAULTS.IP_DAILY;
   if (!env.QUOTA) {
     return { allowed: true, meter: "degraded", used: null, limit };
   }
   const day = new Date().toISOString().slice(0, 10);
-  const key = `q:${install}:${day}`;
+  const instKey = `q:${install}:${day}`;
+  const ipKey = `qip:${ip}:${day}`;
   try {
-    const used = Number(await env.QUOTA.get(key)) || 0;
-    if (used >= ceiling) {
-      return { allowed: false, meter: "ok", used, limit: ceiling, reason: "daily ceiling reached" };
-    }
+    const [used, ipUsed] = await Promise.all([
+      env.QUOTA.get(instKey).then((v) => Number(v) || 0),
+      env.QUOTA.get(ipKey).then((v) => Number(v) || 0),
+    ]);
     if (used + count > limit) {
-      const reason = paidClaim ? "daily limit reached" : "free daily limit reached";
-      return { allowed: false, meter: "ok", used, limit, reason };
+      return { allowed: false, meter: "ok", used, limit, reason: "free daily limit reached" };
+    }
+    if (ipUsed + count > ipLimit) {
+      return { allowed: false, meter: "ok", used, limit: ipLimit, reason: "network daily cap reached" };
     }
     // Expire counters after two days; midnight UTC resets the key anyway.
-    await env.QUOTA.put(key, String(used + count), { expirationTtl: 60 * 60 * 48 });
+    await Promise.all([
+      env.QUOTA.put(instKey, String(used + count), { expirationTtl: 60 * 60 * 48 }),
+      env.QUOTA.put(ipKey, String(ipUsed + count), { expirationTtl: 60 * 60 * 48 }),
+    ]);
     return { allowed: true, meter: "ok", used: used + count, limit };
   } catch (err) {
     // KV over quota or unavailable: degrade open, visibly.
@@ -138,12 +162,26 @@ async function meter(env, install, count, paidClaim) {
 }
 
 async function handleScore(request, env) {
-  if ((request.headers.get("content-length") || 0) > MAX_BODY_BYTES) {
+  // Content-Length is client-supplied and absent on chunked/HTTP2 requests,
+  // so it is only a cheap early rejection, never the real gate. Reject
+  // early when it is present and already over budget, then re-check the
+  // actual decoded byte length below regardless of what the header said.
+  const declaredLen = Number(request.headers.get("content-length") || 0);
+  if (declaredLen > MAX_BODY_BYTES) {
+    return json({ ok: false, error: "body_too_large" }, 413);
+  }
+  let raw;
+  try {
+    raw = await request.text();
+  } catch {
+    return json({ ok: false, error: "bad_json" }, 400);
+  }
+  if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
     return json({ ok: false, error: "body_too_large" }, 413);
   }
   let body;
   try {
-    body = await request.json();
+    body = JSON.parse(raw);
   } catch {
     return json({ ok: false, error: "bad_json" }, 400);
   }
@@ -167,7 +205,8 @@ async function handleScore(request, env) {
   }
   if (!jobs.length) return json({ ok: false, error: "no_texts" }, 400);
 
-  const q = await meter(env, install, jobs.length, body.paid === true);
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const q = await meter(env, install, ip, jobs.length);
   if (!q.allowed) {
     return json({ ok: false, error: "quota", quota: q }, 429);
   }

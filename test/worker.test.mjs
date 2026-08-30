@@ -87,15 +87,36 @@ test("free daily limit enforced at 30", async () => {
   assert.match(d.quota.reason, /free daily limit/);
 });
 
-test("paid claim raises the limit but hits the ceiling", async () => {
-  const env = { QUOTA: mockKV(), PAID_DAILY: "40", CEILING_DAILY: "40" };
+test("a client-asserted paid claim is ignored, free limit still applies", async () => {
+  // There is no paid tier wired server-side (S1): body.paid must not raise
+  // the limit, since nothing verifies the claim.
+  const env = { QUOTA: mockKV(), FREE_DAILY: "10" };
   const texts = Array.from({ length: 10 }, (_, i) => ({ id: i, text: HUMAN_TEXT }));
-  for (let i = 0; i < 4; i++) {
-    const r = await worker.fetch(req({ install: "paid-test", texts, paid: true }), env);
-    assert.equal((await r.json()).ok, true, `paid batch ${i} should pass`);
+  const r1 = await worker.fetch(req({ install: "paid-test", texts, paid: true }), env);
+  assert.equal((await r1.json()).ok, true, "first batch of 10 should pass at the 10 limit");
+  const r2 = await worker.fetch(req({ install: "paid-test", texts, paid: true }), env);
+  assert.equal(r2.status, 429, "a client claiming paid must still hit the free limit");
+});
+
+test("a rotated install id still hits the per-IP cap", async () => {
+  const env = { QUOTA: mockKV(), FREE_DAILY: "5", IP_DAILY: "12" };
+  const texts = Array.from({ length: 5 }, (_, i) => ({ id: i, text: HUMAN_TEXT }));
+  const withIp = (install) =>
+    new Request("https://tellcheck-github.example/score", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.9" },
+      body: JSON.stringify({ install, texts }),
+    });
+  for (let i = 0; i < 2; i++) {
+    const r = await worker.fetch(withIp(`install-${i}`), env);
+    assert.equal((await r.json()).ok, true, `install ${i} should pass under the IP cap`);
   }
-  const r5 = await worker.fetch(req({ install: "paid-test", texts, paid: true }), env);
-  assert.equal(r5.status, 429);
+  // Third distinct install id, same IP: each install is under its own 5-scan
+  // free limit but the shared IP has now seen 10 scans, one more tips it over.
+  const r3 = await worker.fetch(withIp("install-2"), env);
+  assert.equal(r3.status, 429, "the IP cap should stop a rotated install id");
+  const d = await r3.json();
+  assert.match(d.quota.reason, /network daily cap/);
 });
 
 test("missing KV degrades open and says so", async () => {
@@ -120,6 +141,32 @@ test("oversized text is truncated, not rejected", async () => {
   const d = await r.json();
   assert.equal(d.ok, true);
   assert.equal(d.results[0].truncated, true);
+});
+
+test("a whitespace-free blob is capped by raw length, not word count", async () => {
+  // A 300KB blob with no spaces tokenizes as one "word" and would sail past
+  // every word-count budget (S2); the raw character cap must still clip it.
+  const blob = "a".repeat(300_000);
+  const env = { QUOTA: mockKV() };
+  const r = await worker.fetch(req({ install: "blob-test", texts: [{ id: 0, text: blob }] }), env);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  assert.equal(d.results[0].truncated, true, "an untokenizable blob must still be clipped");
+  assert.ok(d.results[0].words < 5, "clipped blob should read as ~1 word to the detector");
+});
+
+test("oversized body is rejected even with no content-length header (S3)", async () => {
+  const env = { QUOTA: mockKV() };
+  const bigText = "word ".repeat(200_000); // well over the 512KB body cap
+  const bad = new Request("https://tellcheck-github.example/score", {
+    method: "POST",
+    // Deliberately no content-type/content-length: simulates a chunked body
+    // where the declared-length gate has nothing to check.
+    body: JSON.stringify({ install: "big", texts: [{ id: 0, text: bigText }] }),
+  });
+  const r = await worker.fetch(bad, env);
+  assert.equal(r.status, 413);
+  assert.equal((await r.json()).error, "body_too_large");
 });
 
 test("request word budget is actually enforced across texts", async () => {
