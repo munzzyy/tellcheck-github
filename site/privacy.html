@@ -4,21 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tellcheck for GitHub privacy policy</title>
+  <link rel="stylesheet" href="assets/style.css" />
   <style>
-    body { max-width: 680px; margin: 0 auto; padding: 0 20px 64px;
-      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      color: #1f2328; background: #fff; }
-    @media (prefers-color-scheme: dark) { body { color: #e6edf3; background: #0d1117; }
-      .tc-header { border-color: #30363d !important; } }
-    h1 { font-size: 26px; margin-top: 32px; } h2 { font-size: 18px; margin-top: 28px; }
-    code { background: rgba(110,119,129,.18); padding: 1px 5px; border-radius: 4px; }
-    .tc-header { display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 0; border-bottom: 1px solid #d0d7de; margin-bottom: 8px; }
-    .tc-wordmark { font-weight: 700; letter-spacing: -0.02em; text-decoration: none; color: inherit; font-size: 16px; }
-    .tc-wordmark b { color: #1f6feb; }
-    .tc-wordmark .tc-sub { font-weight: 400; opacity: 0.6; font-size: 13px; }
-    .tc-nav a { margin-left: 16px; font-size: 14px; color: inherit; opacity: 0.75; text-decoration: none; }
-    .tc-nav a:hover { opacity: 1; text-decoration: underline; }
+    body { max-width: 680px; }
   </style>
 </head>
 <body>
@@ -28,12 +16,18 @@
   </header>
 
   <h1>Tellcheck for GitHub privacy policy</h1>
-  <p>Last updated August 28, 2026.</p>
+  <p>Last updated August 30, 2026.</p>
 
   <h2>The short version</h2>
   <p>When you click scan, the text of the pull request or issue you are looking at is sent
   over HTTPS to the Tellcheck for GitHub scoring server, scored, and returned. It is not
   stored, not logged in full, and not shared. That is the whole product.</p>
+
+  <h2>Won't, not can't</h2>
+  <p>The text does leave your browser. Scoring happens on a server, not on your device, so
+  that part is a "can't" given how the detector works today. Everything below, about what
+  the server does and does not do with that text once it arrives, is a "won't": read the
+  code in this repo and check it.</p>
 
   <h2>What is sent, and when</h2>
   <p>Nothing is sent anywhere until you click a scan button, or turn on auto-scan in the
@@ -44,14 +38,25 @@
   different days cannot be connected to each other.</p>
 
   <h2>What is kept</h2>
-  <p>The scoring server keeps a per-day counter per meter id (deleted within 48 hours)
-  and standard short-lived infrastructure logs. Scanned text is processed in memory and
-  discarded. No database of scanned content exists.</p>
+  <p>The scoring server keeps a per-day counter per meter id and, as a coarse backstop
+  against a rotated meter id, a per-day counter per source IP address; both are deleted
+  within 48 hours. It also keeps standard short-lived infrastructure logs (Cloudflare's).
+  Scanned text is processed in memory and discarded. No database of scanned content exists.
+  There is no server-side "paid" flag either; the worker does not read or trust any
+  client-asserted payment claim, because nothing today can verify one.</p>
 
   <h2>Batch scans</h2>
   <p>Scanning a repo's open PRs calls GitHub's public API from your browser. If you add a
   GitHub token in the options, it is stored only on your device and sent only to
   <code>api.github.com</code>. It never touches Tellcheck's servers.</p>
+
+  <h2>Permissions</h2>
+  <p>The extension's manifest requests exactly one permission: <code>storage</code>, used
+  to hold your settings, the daily meter id, and the last scan result on your device. It
+  does not request access to your browsing history or any site other than
+  <code>github.com</code>, where its content script runs. You can read the manifest and
+  every line of <code>background.js</code> yourself; nothing here is asserted without the
+  source to back it.</p>
 
   <h2>Payments</h2>
   <p>The current version has no payment features. If a paid tier is added later, payments

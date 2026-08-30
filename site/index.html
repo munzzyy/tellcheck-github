@@ -3,53 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tellcheck for GitHub: catch AI-generated pull requests</title>
+  <title>Tellcheck for GitHub: flag likely AI-generated pull requests</title>
   <meta name="description" content="A browser extension that flags likely AI-generated pull requests and issues on GitHub. Built for maintainers drowning in AI slop." />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Tellcheck for GitHub: catch AI-generated pull requests" />
+  <meta property="og:title" content="Tellcheck for GitHub: flag likely AI-generated pull requests" />
   <meta property="og:description" content="A browser extension that flags likely AI-generated pull requests and issues on GitHub, right on the page. One click, comments scored, reasons shown." />
   <meta property="og:url" content="https://tellcheck-github.pages.dev/" />
   <meta property="og:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Tellcheck for GitHub: catch AI-generated pull requests" />
+  <meta name="twitter:title" content="Tellcheck for GitHub: flag likely AI-generated pull requests" />
   <meta name="twitter:description" content="A browser extension that flags likely AI-generated pull requests and issues on GitHub, right on the page." />
   <meta name="twitter:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
-  <style>
-    :root { --accent: #1f6feb; --flag: #d1242f; }
-    body { max-width: 720px; margin: 0 auto; padding: 0 20px 80px;
-      font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      color: #1f2328; background: #fff; }
-    @media (prefers-color-scheme: dark) {
-      body { color: #e6edf3; background: #0d1117; }
-      .card { background: #161b22 !important; border-color: #30363d !important; }
-      .tc-header { border-color: #30363d !important; }
-    }
-    h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.15; letter-spacing: -0.02em; margin-top: 40px; }
-    .lede { font-size: 19px; opacity: 0.85; }
-    .btn { display: inline-block; margin: 18px 12px 0 0; padding: 11px 22px; border-radius: 8px;
-      background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; }
-    .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-    .btn.disabled { background: transparent; color: inherit; opacity: 0.6; border: 1px solid currentColor;
-      cursor: default; pointer-events: none; }
-    .card { border: 1px solid #d0d7de; border-radius: 10px; background: #f6f8fa;
-      padding: 16px 20px; margin: 26px 0; }
-    .chip { display: inline-block; padding: 3px 10px; border-radius: 999px;
-      font: 600 13px/1.5 inherit; background: #fff1e5; color: var(--flag); border: 1px solid var(--flag); }
-    h2 { font-size: 20px; margin-top: 36px; }
-    footer { margin-top: 48px; font-size: 14px; opacity: 0.7; }
-    a { color: var(--accent); }
-    figure { margin: 28px 0; }
-    figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line, #d0d7de); box-shadow: 0 6px 24px rgba(0,0,0,.12); }
-    figcaption { font-size: 13px; opacity: .7; margin-top: 8px; text-align: center; }
-    @media (prefers-color-scheme: dark) { figure img { border-color: #30363d; } }
-    .tc-header { display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 0; border-bottom: 1px solid #d0d7de; margin-bottom: 8px; }
-    .tc-wordmark { font-weight: 700; letter-spacing: -0.02em; text-decoration: none; color: inherit; font-size: 16px; }
-    .tc-wordmark b { color: var(--accent); }
-    .tc-wordmark .tc-sub { font-weight: 400; opacity: 0.6; font-size: 13px; }
-    .tc-nav a { margin-left: 16px; font-size: 14px; color: inherit; opacity: 0.75; text-decoration: none; }
-    .tc-nav a:hover { opacity: 1; text-decoration: underline; }
-  </style>
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
   <header class="tc-header">
@@ -57,13 +22,28 @@
     <nav class="tc-nav"><a href="eval.html">How it's measured</a><a href="privacy.html">Privacy</a><a href="https://tellcheck.pages.dev">Tellcheck API</a></nav>
   </header>
 
-  <h1>Your issue tracker is filling with AI slop.<br />Screen it.</h1>
+  <h1 class="hero">Your issue tracker is filling with AI slop. Screen it.</h1>
   <p class="lede">Tellcheck for GitHub flags likely AI-generated pull requests and issues on
   GitHub, right on the page. One click, comments scored, reasons shown. Built for maintainers
-  who read contributions for a living and are tired of burning review time on generated ones.</p>
+  who read contributions for a living and are tired of burning review time on generated ones.
+  Nobody can reliably prove AI authorship after the fact, ours included; this surfaces tells
+  for a human to weigh, not a verdict to trust blindly.</p>
 
   <a class="btn disabled" href="#" aria-disabled="true" onclick="return false;" title="Under review with Mozilla; check back soon.">Coming soon: Firefox add-on under AMO review</a>
   <a class="btn ghost" href="privacy.html">Privacy policy</a>
+  <p style="margin-top:14px"><a href="https://munzzyy.github.io/feed.xml">Follow build progress</a>:
+  a public log feed, no email or signup.</p>
+
+  <div class="card">
+    <p style="margin-top:0"><strong>What actually leaves your browser.</strong> Nothing, until you
+    click scan. Then: the text of the PR or issue on screen (code blocks stripped), sent over
+    HTTPS to Tellcheck's scoring server, plus a random id that only counts your daily free
+    scans and resets every day. That's a "won't", not a "can't": the text does leave the
+    browser, there's no way around that for a server-side detector. What the server won't do
+    is store it, log it in full, or tie it to your GitHub account, name, or email. The
+    extension asks for one permission, <code>storage</code>; see
+    <a href="privacy.html">the full policy</a> or read <code>manifest.json</code> yourself.</p>
+  </div>
 
   <figure>
     <img src="shots/demo.gif" alt="Tellcheck for GitHub scanning a pull request: a red badge flags the AI-generated description with the signals that fired, a green badge marks the human review comment as clean" loading="lazy" />
@@ -71,32 +51,50 @@
   </figure>
 
   <h2>Why maintainers use it</h2>
-  <p>Codeberg, Godot, OpenJDK, Rust, and Ghostty all restricted AI-generated contributions
-  this year, and enforcing a policy means someone has to read every submission twice. Tellcheck
-  for GitHub does the first read: a scan button on every PR and issue, a badge on every comment,
-  and a breakdown of exactly which signals fired so you can judge for yourself.</p>
+  <p>Codeberg, Godot, OpenJDK, Rust, and Ghostty all took some public stance on AI-generated
+  contributions this year, and every one of those policies runs into the same wall: someone
+  has to actually read the submission to enforce it. That's where the burnout is, not in any
+  argument about authorship. Tellcheck for GitHub does the first read: a scan button on every
+  PR and issue, a badge on every comment, and a breakdown of exactly which signals fired so
+  you can judge for yourself instead of taking a black box's word for it.</p>
 
   <figure>
-    <img src="shots/list-light@1x.png" alt="Tellcheck for GitHub batch mode on a repository's pull request list, with a small badge next to each open PR showing its AI score" loading="lazy" />
+    <img src="shots/list-light.png" alt="Tellcheck for GitHub batch mode on a repository's pull request list, with a small badge next to each open PR showing its AI score" loading="lazy" />
     <figcaption>Batch mode scores a repo's open pull requests at a glance.</figcaption>
   </figure>
 
-  <h2>Honest by design</h2>
-  <p>The classifier is calibrated to a 5% false-positive operating point and abstains on text
-  too short to judge. Every result is labeled a signal, not a verdict. Flagging a real
-  person's writing as AI is worse than missing one bot, and the tool is built around that.
-  The corpus, the calibration, and what it gets wrong are all written up on the
-  <a href="eval.html">measurement page</a>, with a command to reproduce the numbers.</p>
+  <h2>Why this exists now</h2>
+  <p>Three projects, three different answers, all from primary sources: Rust's core teams
+  <a href="https://blog.rust-lang.org/inside-rust/2026/08/05/rust-langrust-is-adopting-an-llm-policy/">adopted a formal LLM policy</a>
+  for the main repo in August, distinguishing assistance from authorship. OpenJDK's
+  <a href="https://openjdk.org/legal/ai">interim policy on generative AI</a> excludes
+  LLM-generated content from contributions outright. Codeberg's members voted to stop hosting
+  projects that are
+  <a href="https://blog.codeberg.org/protecting-our-floss-commons-from-llms.html">mostly AI-generated</a>.
+  Tellcheck for GitHub takes no side on whether AI-assisted contributions should be allowed
+  anywhere, including on projects that ban them outright, and it isn't riding any one
+  project's policy. It exists because whichever way a project lands, somebody still has to
+  check.</p>
+
+  <h2>How accurate is it, honestly</h2>
+  <p>Lead with the number that matters most: 0 human false positives across the 19-document
+  held-out human corpus, at the shipped operating threshold (self-reported, reproduce it with
+  <code>eval/run_eval.py</code>). Then the rest: AUROC 0.984, about 90% of AI text caught at
+  that same 5% false-positive point. The failure modes are real and named on the
+  <a href="eval.html">measurement page</a>: short text gets no verdict at all, and text a
+  person drafted then had a model polish is the case this kind of style detector is weakest
+  against, by design, since the words on the page really were shaped by the model. Non-native
+  English is the honest risk class: the classifier only scores text it detects as English at
+  all (anything else abstains), and formal or translated registers can still read close to
+  the models' own register even when a human wrote every word. The held-out corpus is stacked
+  with exactly that kind of writing on purpose, to measure the false-positive rate rather than
+  flatter it, and it still came back at zero on this set. That is evidence for this corpus,
+  not a guarantee for every writer who opens a PR.</p>
 
   <h2>Pricing</h2>
   <p>Free, with a cap of 30 scored texts a day per install. No account, no signup. There is
   no paid tier yet; if one ships later, this page and the extension will say so before it
   changes anything for you.</p>
-
-  <h2>Private by design</h2>
-  <p>Nothing leaves your browser until you click scan. Scanned text is scored and discarded,
-  never stored. No accounts, no tracking. <a href="privacy.html">The whole policy</a> fits on
-  one page.</p>
 
   <h2>More from Tellcheck</h2>
   <p>The same detector is also available as a metered HTTP API for scoring text anywhere,

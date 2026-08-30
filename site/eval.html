@@ -14,29 +14,7 @@
   <meta name="twitter:title" content="How Tellcheck for GitHub's detector is measured" />
   <meta name="twitter:description" content="The corpus, calibration, operating point, and honest limits behind the detector." />
   <meta name="twitter:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
-  <style>
-    body { max-width: 720px; margin: 0 auto; padding: 0 20px 72px;
-      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      color: #1f2328; background: #fff; }
-    @media (prefers-color-scheme: dark) { body { color: #e6edf3; background: #0d1117; }
-      table { border-color: #30363d !important; } th, td { border-color: #30363d !important; }
-      code, pre { background: #161b22 !important; } .tc-header { border-color: #30363d !important; } }
-    h1 { font-size: 27px; letter-spacing: -0.01em; margin-top: 34px; } h2 { font-size: 19px; margin-top: 32px; }
-    a { color: #1f6feb; }
-    table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 15px; }
-    th, td { border: 1px solid #d0d7de; padding: 7px 10px; text-align: left; }
-    th { background: rgba(110,119,129,.1); }
-    code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 14px; }
-    pre { background: #f6f8fa; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
-    .lead { font-size: 17px; opacity: 0.9; }
-    .tc-header { display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 0; border-bottom: 1px solid #d0d7de; margin-bottom: 8px; }
-    .tc-wordmark { font-weight: 700; letter-spacing: -0.02em; text-decoration: none; color: inherit; font-size: 16px; }
-    .tc-wordmark b { color: #1f6feb; }
-    .tc-wordmark .tc-sub { font-weight: 400; opacity: 0.6; font-size: 13px; }
-    .tc-nav a { margin-left: 16px; font-size: 14px; color: inherit; opacity: 0.75; text-decoration: none; }
-    .tc-nav a:hover { opacity: 1; text-decoration: underline; }
-  </style>
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
   <header class="tc-header">
@@ -59,40 +37,53 @@
   language model; it is a scorer whose every input you can inspect.</p>
 
   <h2>The corpus</h2>
-  <p>It is measured against a labeled corpus of human-written and AI-written text, held
-  separate from the data used to fit it. The human side deliberately includes the writing
-  most likely to trip a detector: formal registers, non-native English, dry technical
-  documentation. The point of stacking it that way is to measure the false-positive rate
-  honestly instead of flattering it.</p>
+  <p>It is measured against a labeled corpus of 19 human documents and 21 AI documents,
+  held separate from the data used to fit it. The human side deliberately includes the
+  writing most likely to trip a detector: 19th- and early-20th-century essays and fiction
+  written in a formal register (Twain, Thoreau, James, Cather), journalism, kernel commit
+  messages, and a translated legal code. Stacking it that way is meant to measure the
+  false-positive rate honestly instead of flattering it.</p>
 
-  <h2>The numbers</h2>
-  <p>Measured on the curated corpus with the shipped calibration (reproducible, see below):</p>
+  <h2>The numbers, false positives first</h2>
+  <p>Self-reported, on this corpus, reproducible with the command below:</p>
   <table>
     <tr><th>Metric</th><th>Prose</th><th>What it means</th></tr>
+    <tr><td>False positives on the 19-document human corpus</td><td>0</td><td>At the shipped operating threshold, on this set. See "what it gets wrong" below for the honest limit of that claim.</td></tr>
+    <tr><td>Caught at the 5% false-positive operating point</td><td>~90%</td><td>Of the 21 AI documents, this share is flagged while only 5% of human text would be, at the calibrated threshold.</td></tr>
     <tr><td>AUROC</td><td>0.984</td><td>How well it ranks AI above human overall. 1.0 is perfect, 0.5 is a coin flip.</td></tr>
-    <tr><td>Caught at the 5% false-positive point</td><td>~90%</td><td>Of the AI texts, this share is flagged while only 5% of human texts would be.</td></tr>
-    <tr><td>False positives on the human corpus</td><td>0%</td><td>At the shipped operating threshold, on this curated human set.</td></tr>
   </table>
-  <p>Source code has its own engine, measured the same way (AUROC 0.96 on a human-code set
-  stacked with the samples most likely to false-positive). Tellcheck for GitHub scores the
-  prose of a PR or issue by default, because that is where the detector is strongest.</p>
+  <p>Source code has its own engine, measured the same way on a separate 16-document human
+  and 15-document AI code corpus (AUROC 0.964, 0% human false positives at the 10% threshold,
+  86% caught). Tellcheck for GitHub scores the prose of a PR or issue by default, because
+  that is where the detector is strongest; a terse, agentic-style code sample in the corpus
+  scores as fully human even though it was AI-written, which the code engine does not claim
+  to catch.</p>
 
   <h2>The operating point, and abstention</h2>
   <p>The detector is tuned to a 5% false-positive operating point: it would rather miss a
-  bot than accuse a person. Below roughly twenty words, or on text it reads as non-English,
-  it does not guess at all. It says it abstained and shows you why. A one-line "lgtm" gets
-  no verdict, because no honest detector can give one.</p>
+  bot than accuse a person. Below roughly twenty words, or on text it reads as anything
+  other than English, it does not guess at all. It says it abstained and shows you why. A
+  one-line "lgtm" gets no verdict, because no honest detector can give one.</p>
 
   <h2>What it gets wrong</h2>
-  <p>False positives are real. Heavily formal writing, some non-native English, and
-  boilerplate-heavy prose can score higher than the person who wrote them deserves. A human
-  who writes cleanly in the register these models imitate can be flagged. Here is a concrete
-  example I will not hide: text written densely about the vocabulary these models overuse
-  trips the style signals, so some of my own writing about this detector scores as
-  AI-ish. That is the failure mode, shown rather than papered over. It is exactly why every
-  result in the extension is labeled a signal at a stated false-positive rate, never proof,
-  and why the advice is always the same: judge the contribution, not the author. The
-  detector points you at text worth a second look. You do the looking.</p>
+  <p>Two failure modes, named rather than buried. First: text a person drafted and then had
+  a model polish for tone or grammar. The words on the page really were shaped by the model
+  at that point, and a style detector built to catch AI phrasing has no principled way to
+  tell "polished" from "written," because in the features it measures they can look the
+  same. Second, and the one to take most seriously: non-native and heavily formal English.
+  The classifier abstains outright on anything it doesn't read as English, but a non-native
+  speaker writing carefully in English, or anyone writing in a dense, formal register, can
+  still land close to the same stylistic territory as current AI prose. The held-out human
+  corpus deliberately includes exactly that kind of writing (translated legal text, 19th
+  century essayists, dry technical docs) to measure this honestly, and it still scored zero
+  false positives on this set. That is real evidence about this corpus. It is not a claim
+  that no non-native or formal writer will ever be flagged, and here's a concrete example I
+  will not hide: text written densely about the vocabulary these models overuse trips the
+  style signals, so some of my own writing about this detector scores as AI-ish. That is
+  the failure mode, shown rather than papered over. It is exactly why every result in the
+  extension is labeled a signal at a stated false-positive rate, never proof, and why the
+  advice is always the same: judge the contribution, not the author. The detector points
+  you at text worth a second look. You do the looking.</p>
 
   <h2>Reproduce it</h2>
   <p>The scoring engine is the same one used here, called exactly as the extension calls
