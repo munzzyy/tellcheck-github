@@ -1,45 +1,49 @@
 #!/usr/bin/env python3
-"""Draw the Tellcheck for GitHub icon: a screen (sieve) mark, blue on transparent.
-
+"""Draw the Tellcheck for GitHub icon: a solid accent tile with a bold T
+monogram and a small red flag dot. Reads at toolbar size, on light or dark.
   python3 tools/gen_icons.py
 """
 import pathlib
 import sys
-
 try:
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageFont
 except ImportError:
     sys.exit("needs pillow: pip install pillow")
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "extension" / "icons"
-BLUE = (31, 111, 235, 255)
-RED = (209, 36, 47, 255)
+ACCENT = (90, 162, 255, 255)   # #5aa2ff, the Tellcheck accent
+DARK = (11, 14, 20, 255)       # #0b0e14, the brand ink
+RED = (255, 107, 107, 255)     # the flag color used across the sites
+S = 12                         # supersample for clean edges
+
+FONTS = (
+    "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+)
+
+
+def load_font(px):
+    for fp in FONTS:
+        try:
+            return ImageFont.truetype(fp, px)
+        except OSError:
+            continue
+    return ImageFont.load_default()
 
 
 def draw(size):
-    s = 8  # supersample for clean edges
-    n = size * s
+    n = size * S
     img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    pad = n * 0.06
-    lw = max(int(n * 0.055), s)
-
-    # Sieve: a circle with a grid through it.
-    d.ellipse([pad, pad, n - pad, n - pad], outline=BLUE, width=int(lw * 1.4))
-    cx = n / 2
-    import math
-    r = (n - 2 * pad) / 2 - lw
-    for f in (-0.45, 0.0, 0.45):
-        off = r * f
-        half = math.sqrt(max(r * r - off * off, 0))
-        d.line([cx - half, cx + off, cx + half, cx + off], fill=BLUE, width=lw)
-        d.line([cx + off, cx - half, cx + off, cx + half], fill=BLUE, width=lw)
-
-    # A red dot caught in the top-left cell of the screen.
-    dot_r = n * 0.09
-    dx, dy = cx - r * 0.62, cx - r * 0.62
-    d.ellipse([dx - dot_r, dy - dot_r, dx + dot_r, dy + dot_r], fill=RED)
-
+    d.rounded_rectangle([0, 0, n, n], radius=int(n * 0.22), fill=ACCENT)
+    f = load_font(int(n * 0.60))
+    tb = d.textbbox((0, 0), "T", font=f)
+    tw, th = tb[2] - tb[0], tb[3] - tb[1]
+    d.text(((n - tw) / 2 - tb[0], (n - th) / 2 - tb[1] - n * 0.02), "T", font=f, fill=DARK)
+    r = n * 0.085
+    cx, cy = n * 0.71, n * 0.25
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=RED)
     return img.resize((size, size), Image.LANCZOS)
 
 
