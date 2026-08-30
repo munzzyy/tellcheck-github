@@ -5,25 +5,28 @@ Tellcheck for GitHub
 
 ## Summary (250 chars max)
 Flags likely AI-generated pull requests and issues on GitHub. One click scores every
-comment and shows which signals fired. Calibrated to a 5% false-positive rate, abstains
-on short text. A signal for maintainers, not a verdict.
+comment and shows which signals fired. Tuned to miss a bot before it accuses a person,
+and it abstains on short text. A signal for maintainers, not a verdict.
 
 ## Description
 Your issue tracker is filling with AI slop. Codeberg, Godot, OpenJDK, Rust, and Ghostty
-all restricted AI-generated contributions this year. Enforcing a policy means a human
-has to read every submission twice.
+all restricted AI-generated contributions this year. Whichever way a project lands,
+enforcing it means a human still has to read every submission.
 
 Tellcheck for GitHub does the first read. On any GitHub pull request or issue, click
 scan. The description and comments get badges saying whether the text statistically
 reads as AI-generated. Each badge opens a breakdown of the exact signals that fired:
 buzzword density, stock phrases, uniform sentence rhythm, chat-UI artifacts, and more.
-On a repo's pull request list, scan the 20 most recent open PRs in one click. Anything
-over a scan's limit is labeled "not scored", never silently skipped.
+On a repo's pull request list, scan up to 25 open PRs in one click. Anything past a
+scan's limit is labeled "not scored", never silently skipped.
 
-Honest by design. The classifier runs at a 5% false-positive operating point, abstains
-on text too short to judge, and every result is labeled a signal rather than proof.
-Flagging a real person's writing as AI is worse than missing one bot, and the tool is
-built around that principle.
+Honest about what it is. It surfaces tells for you to weigh, never a verdict. Nobody
+can prove AI authorship after the fact, this tool included, so every result is a signal
+at a stated false-positive rate. On a held-out set of 4,300 real non-native-English
+essays the false-positive rate is 7.8%, not zero, which is the honest ceiling on
+trusting any single flag. That is why the advice never changes: judge the contribution,
+not the author. The full measurement page, held-out numbers and named failure modes, is
+linked from the site.
 
 Private by design. Nothing leaves your browser until you click scan (auto-scan exists,
 ships off). Scanned text is scored over HTTPS and discarded, never stored. No accounts,
