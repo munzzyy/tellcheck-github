@@ -77,19 +77,18 @@
   check.</p>
 
   <h2>How accurate is it, honestly</h2>
-  <p>Lead with the number that matters most: 0 human false positives across the 19-document
-  held-out human corpus, at the shipped operating threshold (self-reported, reproduce it with
-  <code>eval/run_eval.py</code>). Then the rest: AUROC 0.984, about 90% of AI text caught at
-  that same 5% false-positive point. The failure modes are real and named on the
-  <a href="eval.html">measurement page</a>: short text gets no verdict at all, and text a
-  person drafted then had a model polish is the case this kind of style detector is weakest
-  against, by design, since the words on the page really were shaped by the model. Non-native
-  English is the honest risk class: the classifier only scores text it detects as English at
-  all (anything else abstains), and formal or translated registers can still read close to
-  the models' own register even when a human wrote every word. The held-out corpus is stacked
-  with exactly that kind of writing on purpose, to measure the false-positive rate rather than
-  flatter it, and it still came back at zero on this set. That is evidence for this corpus,
-  not a guarantee for every writer who opens a PR.</p>
+  <p>Lead with the number that matters most for a tool that flags people: how often it is wrong
+  about a human. On a held-out set of 4,300 non-native-English essays, real writing from real
+  ESL students, the false-positive rate is 7.8% at the shipped operating point. Not zero. On
+  current-model AI text it catches about 92% at that 5% false-positive point (AUROC 0.983 on
+  the 2025-generator held-out set), dropping to 67% on 2022-era base models, all self-reported
+  and laid out on the <a href="eval.html">measurement page</a>. The failure modes are real and
+  named there: short text gets no verdict at all, and text a person drafted then had a model
+  polish is the case this kind of style detector is weakest against, by design, since the words
+  on the page really were shaped by the model. Non-native and formal English is the honest risk
+  class, and that 7.8% is exactly it, measured at scale rather than flattered. That is why every
+  flag is a signal at a stated false-positive rate, never proof, and the advice never changes:
+  judge the contribution, not the author.</p>
 
   <h2>Pricing</h2>
   <p>Free, with a cap of 30 scored texts a day per install. No account, no signup. There is

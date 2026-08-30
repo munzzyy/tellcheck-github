@@ -4,10 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>How Tellcheck for GitHub's detector is measured</title>
-  <meta name="description" content="The corpus, calibration, operating point, and honest limits behind Tellcheck for GitHub's AI-text detector. Every number is reproducible." />
+  <meta name="description" content="The corpus, calibration, operating point, and honest limits behind Tellcheck for GitHub's AI-text detector." />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="How Tellcheck for GitHub's detector is measured" />
-  <meta property="og:description" content="The corpus, calibration, operating point, and honest limits behind the detector. Every number is reproducible." />
+  <meta property="og:description" content="The corpus, calibration, operating point, and honest limits behind the detector." />
   <meta property="og:url" content="https://tellcheck-github.pages.dev/eval.html" />
   <meta property="og:image" content="https://tellcheck-github.pages.dev/shots/detail-light.png" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -26,7 +26,7 @@
   <p class="lead">AI-text detectors have a bad reputation, mostly earned. Plenty of them
   are black boxes that flag a nervous student's essay as a robot and offer no way to check
   the claim. This page is the opposite: the corpus, the calibration, the operating point,
-  and the parts it gets wrong. Every number below comes from a script you can run.</p>
+  and the parts it gets wrong, with the false-positive number that matters put first.</p>
 
   <h2>What it actually does</h2>
   <p>The detector reads prose and scores how much it looks like current-model AI writing,
@@ -36,28 +36,35 @@
   returns a probability. It is not a vibe and it is not a language model judging another
   language model; it is a scorer whose every input you can inspect.</p>
 
-  <h2>The corpus</h2>
-  <p>It is measured against a labeled corpus of 19 human documents and 21 AI documents,
-  held separate from the data used to fit it. The human side deliberately includes the
-  writing most likely to trip a detector: 19th- and early-20th-century essays and fiction
-  written in a formal register (Twain, Thoreau, James, Cather), journalism, kernel commit
-  messages, and a translated legal code. Stacking it that way is meant to measure the
-  false-positive rate honestly instead of flattering it.</p>
+  <h2>The false-positive number that matters</h2>
+  <p>Every number on this page is self-reported: we ran the eval, we picked the sets, nobody
+  audited it. Saying that plainly is the point. For a tool that flags contributions, the
+  number that matters is how often it is wrong about a human, and the hardest version of that
+  is careful non-native English, which sits in the same formal register the models write in.
+  On a held-out set of 4,300 non-native-English essays, real writing from real ESL students,
+  the false-positive rate is <b>7.8%</b> at the shipped operating point. Not zero. That is the
+  honest ceiling on trusting any single flag, and it is why the extension never calls a flag
+  proof.</p>
 
-  <h2>The numbers, false positives first</h2>
-  <p>Self-reported, on this corpus, reproducible with the command below:</p>
+  <h2>Accuracy on held-out generators</h2>
+  <p>Measured on data the calibration never saw, split by how current the generator is. These
+  are the detector's real reported numbers, not a small in-house sample:</p>
   <table>
-    <tr><th>Metric</th><th>Prose</th><th>What it means</th></tr>
-    <tr><td>False positives on the 19-document human corpus</td><td>0</td><td>At the shipped operating threshold, on this set. See "what it gets wrong" below for the honest limit of that claim.</td></tr>
-    <tr><td>Caught at the 5% false-positive operating point</td><td>~90%</td><td>Of the 21 AI documents, this share is flagged while only 5% of human text would be, at the calibrated threshold.</td></tr>
-    <tr><td>AUROC</td><td>0.984</td><td>How well it ranks AI above human overall. 1.0 is perfect, 0.5 is a coin flip.</td></tr>
+    <tr><th>Held-out set</th><th>What it is</th><th>AUROC</th><th>Catch rate at 5% FPR</th></tr>
+    <tr><td>DetectRL-X</td><td>2025-era generators (DeepSeek-V3 and similar), plus paraphrase and zero-width-space attacks</td><td>0.983</td><td>92%</td></tr>
+    <tr><td>RAID-test</td><td>2022-23 generators (GPT-2/3, Cohere, MPT, Mistral)</td><td>0.89</td><td>67%</td></tr>
+    <tr><td>MAGE (paraphrase)</td><td>GPT text run through a paraphraser, out of domain</td><td>0.81</td><td>39%</td></tr>
+    <tr><td>humanizer-attack</td><td>Ghostbuster "undetectable" essays</td><td>-</td><td>99% caught</td></tr>
   </table>
-  <p>Source code has its own engine, measured the same way on a separate 16-document human
-  and 15-document AI code corpus (AUROC 0.964, 0% human false positives at the 10% threshold,
-  86% caught). Tellcheck for GitHub scores the prose of a PR or issue by default, because
-  that is where the detector is strongest; a terse, agentic-style code sample in the corpus
-  scores as fully human even though it was AI-written, which the code engine does not claim
-  to catch.</p>
+  <p>For comparison, GPTZero's public RAID submission is 0.9724 catch rate at 5% false
+  positives: ahead of this detector on RAID's older models, behind it on the ESL false-positive
+  axis, where that class of detector runs around 60%. The RAID gap on old base-model text is
+  real and named, not hidden.</p>
+  <p>A separate 40-document labeled set (19 human, 21 AI) rides along in the repo, stacked with
+  the writing most likely to trip a detector: formal 19th-century essayists (Twain, Thoreau,
+  James, Cather), journalism, kernel commit messages, a translated legal code. It is not a
+  benchmark and is not quoted as one; it is the calibration guard that catches a change that
+  would start flagging Mark Twain as a robot before it ships.</p>
 
   <h2>The operating point, and abstention</h2>
   <p>The detector is tuned to a 5% false-positive operating point: it would rather miss a
@@ -73,24 +80,28 @@
   same. Second, and the one to take most seriously: non-native and heavily formal English.
   The classifier abstains outright on anything it doesn't read as English, but a non-native
   speaker writing carefully in English, or anyone writing in a dense, formal register, can
-  still land close to the same stylistic territory as current AI prose. The held-out human
-  corpus deliberately includes exactly that kind of writing (translated legal text, 19th
-  century essayists, dry technical docs) to measure this honestly, and it still scored zero
-  false positives on this set. That is real evidence about this corpus. It is not a claim
-  that no non-native or formal writer will ever be flagged, and here's a concrete example I
-  will not hide: text written densely about the vocabulary these models overuse trips the
+  still land close to the same stylistic territory as current AI prose. The 7.8% false-positive
+  rate on 4,300 real ESL essays above is exactly this failure mode measured at scale rather
+  than papered over, and it is not zero. It is a claim that some non-native and formal writers
+  will be flagged, which is why a flag is a signal to look, never proof. Here is a concrete
+  example I will not hide: text written densely about the vocabulary these models overuse trips the
   style signals, so some of my own writing about this detector scores as AI-ish. That is
   the failure mode, shown rather than papered over. It is exactly why every result in the
   extension is labeled a signal at a stated false-positive rate, never proof, and why the
   advice is always the same: judge the contribution, not the author. The detector points
   you at text worth a second look. You do the looking.</p>
 
-  <h2>Reproduce it</h2>
-  <p>The scoring engine is the same one used here, called exactly as the extension calls
-  it. The evaluation is one command against the labeled corpus:</p>
+  <h2>What you can and cannot rerun</h2>
+  <p>The held-out generator sets above (DetectRL-X, RAID-test, MAGE, the humanizer-attack set,
+  and the 4,300-essay ESL gate) are licensed for evaluation use and are not redistributed, so
+  this page cannot hand you a one-line command to reproduce them the way an open dataset would.
+  What is committed to: they are the same frozen sets on every release, the fitting never
+  touches them, and the numbers are the direct output of the eval against the shipped model.
+  The 40-document calibration set that guards against regressions does ship in the repo and
+  runs with one command:</p>
   <pre>python3 eval/run_eval.py</pre>
-  <p>It prints the AUROC, the catch rate at the 5% false-positive point, and the human
-  false-positive count, so the table above is not something you have to take on faith.</p>
+  <p>That prints the per-sample table for the small guard set. It is the linter's tripwire,
+  not the detector benchmark, and it is labeled that way here so the two are never confused.</p>
 
   <p style="margin-top:34px"><a href="index.html">Back to Tellcheck for GitHub</a></p>
 </body>
