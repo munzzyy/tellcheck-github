@@ -1,7 +1,6 @@
 /* Tellcheck for GitHub - shared site styles.
-   Dark by default, using the same tokens as the Tellcheck API site
-   (--bg/--panel/--ink/--accent) so the two sites read as one product.
-   A light theme is a prefers-color-scheme:light override only. */
+   Dark, using the same tokens as the Tellcheck API site
+   (--bg/--panel/--ink/--accent) so the two sites read as one product. */
 
 :root {
   --bg: #0b0e14;
@@ -13,20 +12,6 @@
   --flag: #ff6b6b;
   --flag-bg: rgba(255, 107, 107, 0.12);
   --shadow: rgba(0, 0, 0, 0.35);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #ffffff;
-    --panel: #f6f8fa;
-    --ink: #1f2328;
-    --accent: #1f6feb;
-    --muted: #59636e;
-    --line: #d0d7de;
-    --flag: #d1242f;
-    --flag-bg: #fff1e5;
-    --shadow: rgba(0, 0, 0, 0.12);
-  }
 }
 
 * { box-sizing: border-box; }
