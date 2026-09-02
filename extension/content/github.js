@@ -91,6 +91,9 @@
     b = el("button", `${NS}-fab`);
     b.id = `${NS}-fab`;
     b.type = "button";
+    // The button's own label is the status readout ("Scanning...", "3 flagged
+    // of 12"), so a screen reader has to be told it updates in place.
+    b.setAttribute("aria-live", "polite");
     document.body.appendChild(b);
     return b;
   }
@@ -145,11 +148,22 @@
     return panel;
   }
 
+  let panelSeq = 0;
+
   function attachBadge(block, result) {
     const chip = chipFor(result);
     const panel = panelFor(result);
     panel.hidden = true;
-    chip.addEventListener("click", () => { panel.hidden = !panel.hidden; });
+    // The chip is a disclosure button. Without these it announces as a plain
+    // button and never says whether the breakdown is open, which is the whole
+    // "reasons shown" part of the product.
+    panel.id = `${NS}-panel-${++panelSeq}`;
+    chip.setAttribute("aria-controls", panel.id);
+    chip.setAttribute("aria-expanded", "false");
+    chip.addEventListener("click", () => {
+      panel.hidden = !panel.hidden;
+      chip.setAttribute("aria-expanded", String(!panel.hidden));
+    });
     block.el.insertAdjacentElement("beforebegin", chip);
     chip.insertAdjacentElement("afterend", panel);
   }

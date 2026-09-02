@@ -67,10 +67,13 @@
   would start flagging Mark Twain as a robot before it ships.</p>
 
   <h2>The operating point, and abstention</h2>
-  <p>The detector is tuned to a 5% false-positive operating point: it would rather miss a
-  bot than accuse a person. Below roughly twenty words, or on text it reads as anything
-  other than English, it does not guess at all. It says it abstained and shows you why. A
-  one-line "lgtm" gets no verdict, because no honest detector can give one.</p>
+  <p>The detector is tuned to a 5% false-positive operating point on a broad mix of English
+  text: it would rather miss a bot than accuse a person. That is the target the threshold is
+  set from, not a promise that every group lands on it. Non-native English comes in above it,
+  at 7.8%, which is the whole point of putting that number first. Below roughly twenty words,
+  or on text it reads as anything other than English, it does not guess at all. It says it
+  abstained and shows you why. A one-line "lgtm" gets no verdict, because no honest detector
+  can give one.</p>
 
   <h2>What it gets wrong</h2>
   <p>Two failure modes, named rather than buried. First: text a person drafted and then had

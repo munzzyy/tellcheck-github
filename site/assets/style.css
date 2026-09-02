@@ -73,19 +73,14 @@ h2 { font-size: 20px; margin-top: 36px; }
   font-weight: 700;
   text-decoration: none;
 }
+.btn:hover { filter: brightness(1.12); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .btn.ghost {
   background: transparent;
   color: var(--accent);
   border: 1px solid var(--accent);
 }
-.btn.disabled {
-  background: transparent;
-  color: inherit;
-  opacity: 0.6;
-  border: 1px solid currentColor;
-  cursor: default;
-  pointer-events: none;
-}
+.btn.ghost:hover { background: rgba(90, 162, 255, 0.12); filter: none; }
 
 .card {
   border: 1px solid var(--line);

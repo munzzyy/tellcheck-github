@@ -19,7 +19,7 @@
       padding: 8px 10px; margin-bottom: 10px;
     }
     .bar { height: 6px; border-radius: 3px; background: rgba(110, 119, 129, 0.25); margin-top: 6px; overflow: hidden; }
-    .bar i { display: block; height: 100%; background: #1f6feb; }
+    .bar > div { height: 100%; background: #1f6feb; }
     button {
       display: block; width: 100%; margin-top: 8px; padding: 7px 10px;
       border: 1px solid #d0d7de; border-radius: 6px; background: #f6f8fa;
@@ -34,7 +34,7 @@
   <h1>Tellcheck</h1>
   <div class="quota">
     <div id="quota-line" class="muted">No scans yet today.</div>
-    <div class="bar"><i id="quota-bar" style="width:0%"></i></div>
+    <div class="bar" aria-hidden="true"><div id="quota-bar" style="width:0%"></div></div>
   </div>
   <button id="scan" class="primary">Scan this page</button>
   <button id="upgrade" hidden>Go unlimited</button>
