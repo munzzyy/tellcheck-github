@@ -233,20 +233,25 @@ test("signal rows render as readable strings", () => {
 // the test measures the counter logic under the semantics production has.
 function mockDO() {
   const instances = new Map();
+  const seen = instances;
   return {
+    instances: seen,
     idFromName(name) { return name; },
     get(name) {
       let inst = instances.get(name);
       if (!inst) {
         const store = new Map();
+        const calls = { setAlarm: 0, get: 0, put: 0 };
         const storage = {
-          async get(k) { return store.get(k); },
-          async put(k, v) { store.set(k, v); },
+          async get(k) { calls.get++; return store.get(k); },
+          async put(k, v) { calls.put++; store.set(k, v); },
           async getAlarm() { return store.get("__alarm") ?? null; },
-          async setAlarm(t) { store.set("__alarm", t); },
+          async setAlarm(t) { calls.setAlarm++; store.set("__alarm", t); },
           async deleteAll() { store.clear(); },
         };
-        inst = { obj: new MeterDO({ storage }), queue: Promise.resolve() };
+        inst = { calls };
+        inst.obj = new MeterDO({ storage });
+        inst.queue = Promise.resolve();
         instances.set(name, inst);
       }
       return {
@@ -326,4 +331,16 @@ test("meter degrades open when the durable object throws", async () => {
   const r = await worker.fetch(scoreReq("degrade"), env);
   assert.equal(r.status, 200);
   assert.equal((await r.json()).quota.meter, "degraded");
+});
+
+
+test("cleanup alarm is armed once per instance, not once per scan", async () => {
+  // Checking getAlarm() on every request costs a storage read per scan and the
+  // free plan meters reads, so the alarm is set on the first write only.
+  const ns = mockDO();
+  const env = { METER: ns, FREE_DAILY: "50", IP_DAILY: "500" };
+  for (let i = 0; i < 3; i++) await worker.fetch(scoreReq("alarm-install"), env);
+  const inst = ns.instances.get("q:alarm-install:" + new Date().toISOString().slice(0, 10));
+  assert.ok(inst, "expected a durable object instance for the install counter");
+  assert.equal(inst.calls.setAlarm, 1, `alarm should be armed once, was ${inst.calls.setAlarm}`);
 });

@@ -286,11 +286,17 @@ export class MeterDO {
     if (rec.used + count > limit) {
       return Response.json({ allowed: false, used: rec.used });
     }
+    const first = rec.used === 0;
     rec.used += count;
     await this.state.storage.put("rec", rec);
     // Counters are day-scoped and the key carries the day, so an instance is
-    // dead weight after its day. Drop its storage rather than keep it forever.
-    if ((await this.state.storage.getAlarm()) === null) {
+    // dead weight once its day passes. Schedule its own cleanup on the first
+    // write only: checking getAlarm() on every request would spend a storage
+    // read per scan, and the free plan meters those. alarm() below wipes the
+    // record, and on a compatibility_date at or after 2026-02-24 (ours is
+    // 2026-08-01) deleteAll() clears the alarm with it, so nothing is left
+    // scheduled against an empty object.
+    if (first) {
       await this.state.storage.setAlarm(Date.now() + 48 * 60 * 60 * 1000);
     }
     return Response.json({ allowed: true, used: rec.used });
