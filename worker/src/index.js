@@ -7,13 +7,14 @@
 //     -> { ok, results: [{ id, p, verdict, flagged, words, truncated,
 //                          score_per_1k, signals }], quota }
 //
-// Free quota is metered per install id AND per source IP per UTC day in KV.
-// The install id alone is trivial to rotate, so a coarse IP cap sits behind
-// it as a backstop; either ceiling being hit blocks the request. If KV is
-// missing or over its own limits the meter degrades OPEN on purpose: scoring
-// keeps working and the response says meter:"degraded" instead of silently
-// lying about enforcement. A metering outage should cost pennies, not break
-// users.
+// Free quota is metered per install id AND per source IP per UTC day, counted
+// in a Durable Object so the check and the increment are atomic (KV is not:
+// see the note above meter()). The install id alone is trivial to rotate, so a
+// coarse IP cap sits behind it as a backstop; either ceiling being hit blocks
+// the request. If the counter is missing or unavailable the meter degrades OPEN
+// on purpose: scoring keeps working and the response says meter:"degraded"
+// instead of silently lying about enforcement. A metering outage should cost
+// pennies, not break users.
 //
 // There is no paid tier wired up (no server can verify an ExtensionPay
 // claim without a paid API we don't have), so the worker does not read or
@@ -129,7 +130,54 @@ export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT) {
   };
 }
 
+// Ask one Durable Object instance to count. The instance is addressed by the
+// counter key, is single-threaded, and Cloudflare input-gates deliveries while
+// a storage op is in flight, so its own get/check/put is atomic for that key.
+async function bump(ns, key, count, limit, day, refund = false) {
+  const stub = ns.get(ns.idFromName(key));
+  const res = await stub.fetch("https://meter/bump", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ count, limit, day, refund }),
+  });
+  return res.json();
+}
+
+// Counting has to be atomic or the cap is theatre. KV cannot do it: get-then-put
+// from concurrent isolates all read the same pre-increment value, so a burst of
+// parallel requests every one of them passes the check and the stored counter
+// moves by one. That was live (12 parallel scans cost 1 unit of quota), which
+// made both the 30/day and 300/day ceilings bypassable from a single connection
+// without rotating anything. The Durable Object path below is exact.
+//
+// meterKV stays as the fallback for an environment without the binding: it still
+// stops sequential abuse, and a metering outage must never stop scoring.
 async function meter(env, install, ip, count) {
+  const limit = Number(env.FREE_DAILY) || DEFAULTS.FREE_DAILY;
+  const ipLimit = Number(env.IP_DAILY) || DEFAULTS.IP_DAILY;
+  if (!env.METER) return meterKV(env, install, ip, count);
+
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    const inst = await bump(env.METER, `q:${install}:${day}`, count, limit, day);
+    if (!inst.allowed) {
+      return { allowed: false, meter: "ok", used: inst.used, limit, reason: "free daily limit reached" };
+    }
+    const net = await bump(env.METER, `qip:${ip}:${day}`, count, ipLimit, day);
+    if (!net.allowed) {
+      // The install counter already consumed this request. Hand it back so a
+      // user behind a busy shared IP does not also lose their own allowance.
+      await bump(env.METER, `q:${install}:${day}`, count, limit, day, true).catch(() => {});
+      return { allowed: false, meter: "ok", used: inst.used - count, limit: ipLimit, reason: "network daily cap reached" };
+    }
+    return { allowed: true, meter: "ok", used: inst.used, limit };
+  } catch (err) {
+    // Durable Object unavailable: degrade open, visibly, same as KV.
+    return { allowed: true, meter: "degraded", used: null, limit };
+  }
+}
+
+async function meterKV(env, install, ip, count) {
   const limit = Number(env.FREE_DAILY) || DEFAULTS.FREE_DAILY;
   const ipLimit = Number(env.IP_DAILY) || DEFAULTS.IP_DAILY;
   if (!env.QUOTA) {
@@ -213,6 +261,41 @@ async function handleScore(request, env) {
 
   const results = jobs.map((j) => ({ id: j.id, ...scoreText(j.text, j.take) }));
   return json({ ok: true, results, quota: q, dropped: texts.length - jobs.length });
+}
+
+// One instance per counter key (install-day, ip-day). Single-threaded, so the
+// read/check/write below cannot interleave with another request for the key.
+export class MeterDO {
+  constructor(state) {
+    this.state = state;
+  }
+
+  async fetch(request) {
+    const { count, limit, day, refund } = await request.json();
+    const rec = (await this.state.storage.get("rec")) || { day, used: 0 };
+    if (rec.day !== day) { rec.day = day; rec.used = 0; }
+
+    if (refund) {
+      rec.used = Math.max(0, rec.used - count);
+      await this.state.storage.put("rec", rec);
+      return Response.json({ allowed: true, used: rec.used });
+    }
+    if (rec.used + count > limit) {
+      return Response.json({ allowed: false, used: rec.used });
+    }
+    rec.used += count;
+    await this.state.storage.put("rec", rec);
+    // Counters are day-scoped and the key carries the day, so an instance is
+    // dead weight after its day. Drop its storage rather than keep it forever.
+    if ((await this.state.storage.getAlarm()) === null) {
+      await this.state.storage.setAlarm(Date.now() + 48 * 60 * 60 * 1000);
+    }
+    return Response.json({ allowed: true, used: rec.used });
+  }
+
+  async alarm() {
+    await this.state.storage.deleteAll();
+  }
 }
 
 export default {

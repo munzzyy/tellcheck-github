@@ -1,9 +1,9 @@
-// Worker API tests. Run: node --test test/
+// Worker API tests. Run: node --test test/worker.test.mjs
 // Exercises the fetch handler directly with mock Requests and a mock KV, so
 // nothing needs wrangler or the network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import worker, { scoreText } from "../worker/src/index.js";
+import worker, { scoreText, MeterDO } from "../worker/src/index.js";
 
 function mockKV(store = new Map()) {
   return {
@@ -223,4 +223,105 @@ test("signal rows render as readable strings", () => {
     assert.ok(!sig.includes("[object"), `unrendered object in signal: ${sig}`);
     assert.ok(!/undefined/.test(sig), `undefined leaked into signal: ${sig}`);
   }
+});
+
+
+// ---------- atomic meter ----------
+// A Durable Object instance is single-threaded and input-gated: Cloudflare does
+// not deliver a second request to an instance while the first is awaiting a
+// storage op. This mock reproduces that by chaining requests per instance, so
+// the test measures the counter logic under the semantics production has.
+function mockDO() {
+  const instances = new Map();
+  return {
+    idFromName(name) { return name; },
+    get(name) {
+      let inst = instances.get(name);
+      if (!inst) {
+        const store = new Map();
+        const storage = {
+          async get(k) { return store.get(k); },
+          async put(k, v) { store.set(k, v); },
+          async getAlarm() { return store.get("__alarm") ?? null; },
+          async setAlarm(t) { store.set("__alarm", t); },
+          async deleteAll() { store.clear(); },
+        };
+        inst = { obj: new MeterDO({ storage }), queue: Promise.resolve() };
+        instances.set(name, inst);
+      }
+      return {
+        fetch(url, init) {
+          const run = inst.queue.then(() => inst.obj.fetch(new Request(url, init)));
+          inst.queue = run.then(() => {}, () => {});
+          return run;
+        },
+      };
+    },
+  };
+}
+
+function scoreReq(install, text = HUMAN_TEXT) {
+  return new Request("https://tellcheck-github.example/score", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.9" },
+    body: JSON.stringify({ install, texts: [{ id: "a", text }] }),
+  });
+}
+
+test("durable-object meter holds the cap exactly under a concurrent burst", async () => {
+  const env = { METER: mockDO(), FREE_DAILY: "5", IP_DAILY: "300" };
+  const rs = await Promise.all(
+    Array.from({ length: 12 }, () => worker.fetch(scoreReq("burst-install"), env))
+  );
+  const served = rs.filter((r) => r.status === 200).length;
+  const blocked = rs.filter((r) => r.status === 429).length;
+  assert.equal(served, 5, `cap is 5, got ${served} served`);
+  assert.equal(blocked, 7);
+});
+
+test("kv meter over-serves the same burst (why the durable object exists)", async () => {
+  // Negative control. This is the live bug: 12 parallel scans all read the same
+  // pre-increment counter and all pass. If this ever asserts 5, the KV path was
+  // fixed some other way and the test above stopped proving anything.
+  const env = { QUOTA: mockKV(), FREE_DAILY: "5", IP_DAILY: "300" };
+  const rs = await Promise.all(
+    Array.from({ length: 12 }, () => worker.fetch(scoreReq("burst-kv"), env))
+  );
+  const served = rs.filter((r) => r.status === 200).length;
+  assert.ok(served > 5, `expected the KV path to over-serve, got ${served}`);
+});
+
+test("durable-object meter counts down a day and blocks after the cap", async () => {
+  const env = { METER: mockDO(), FREE_DAILY: "3", IP_DAILY: "300" };
+  const seen = [];
+  for (let i = 0; i < 4; i++) {
+    const r = await worker.fetch(scoreReq("serial-install"), env);
+    seen.push(r.status);
+  }
+  assert.deepEqual(seen, [200, 200, 200, 429]);
+});
+
+test("ip cap blocks without eating the user's own allowance", async () => {
+  const env = { METER: mockDO(), FREE_DAILY: "50", IP_DAILY: "2" };
+  await worker.fetch(scoreReq("user-a"), env);
+  await worker.fetch(scoreReq("user-a"), env);
+  const blocked = await worker.fetch(scoreReq("user-b"), env);
+  assert.equal(blocked.status, 429);
+  const body = await blocked.json();
+  assert.equal(body.quota.reason, "network daily cap reached");
+  // user-b was refunded, so their own counter is still at zero.
+  const envRoomy = { METER: env.METER, FREE_DAILY: "50", IP_DAILY: "99" };
+  const after = await worker.fetch(scoreReq("user-b"), envRoomy);
+  assert.equal(after.status, 200);
+  assert.equal((await after.json()).quota.used, 1, "refund should have returned the unit");
+});
+
+test("meter degrades open when the durable object throws", async () => {
+  const env = {
+    METER: { idFromName: (n) => n, get: () => ({ fetch: async () => { throw new Error("do down"); } }) },
+    FREE_DAILY: "5",
+  };
+  const r = await worker.fetch(scoreReq("degrade"), env);
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).quota.meter, "degraded");
 });

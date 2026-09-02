@@ -24,7 +24,7 @@ test/               worker test suite (node --test)
 
 ```
 python3 tools/sync_detector.py        # pull the private detector into the worker
-node --test test/worker.test.mjs      # 14 tests, no network needed
+node --test test/worker.test.mjs      # 22 tests, no network needed
 python3 test/content_smoke.py         # headless DOM smoke test (needs chromium)
 bash tools/package.sh                 # lint + build dist/tellcheck-github-x.y.z.zip
 ```

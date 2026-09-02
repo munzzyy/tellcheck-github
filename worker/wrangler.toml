@@ -14,3 +14,15 @@ IP_DAILY = "300"
 [[kv_namespaces]]
 binding = "QUOTA"
 id = "3f994a79cea54baa843ce16076761cc1"
+
+# Atomic daily counters. KV get-then-put races under concurrent requests, which
+# made the daily caps bypassable; a Durable Object instance is single-threaded
+# per key so its check-and-increment is exact. SQLite-backed class, which is
+# what the Workers free plan supports.
+[[durable_objects.bindings]]
+name = "METER"
+class_name = "MeterDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MeterDO"]
