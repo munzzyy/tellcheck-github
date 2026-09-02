@@ -23,7 +23,7 @@ CONTENT_CSS = (ROOT / "extension" / "content" / "github.css").read_text()
 MOCK_RESPONSE = {
     "ok": True,
     "results": [
-        {"id": "b0", "flagged": True, "abstained": False, "p": 0.97,
+        {"id": "b0", "flagged": True, "abstained": False, "p": 1,
          "verdict": "flags as AI at the 5% false-positive operating point", "words": 300,
          "truncated": False, "language": "en",
          "signals": ["31 buzzword hits (delve, leverage, seamless)"]},
@@ -122,13 +122,20 @@ def main():
 
     checks = [
         ("fab rendered", 'id="tellcheck-fab"' in dom),
-        ("flag chip on AI comment", "tellcheck-flag" in dom and "flags as AI (p 0.97)" in dom),
+        ("flag chip on AI comment", "tellcheck-flag" in dom and "flags as AI (p 1.00)" in dom),
         ("clean chip on human comment", "tellcheck-clean" in dom and "no AI detection" in dom),
         ("abstain chip on short comment", "tellcheck-abstain" in dom and "too short to judge" in dom),
         ("English-only abstain labeled honestly", "not scored (English only)" in dom),
         ("dropped block gets a not-scored chip", "not scored (scan limit)" in dom),
         ("signal panel present", "31 buzzword hits" in dom),
         ("signal-not-proof footer", "not proof" in dom),
+        ("chip announces itself as a closed disclosure", 'aria-expanded="false"' in dom),
+        ("chip points at the panel it opens", 'aria-controls="tellcheck-panel-' in dom),
+        # Match the rendered chip, not raw page text: the content script's own
+        # source is embedded in this fixture, so a bare substring search hits
+        # the comment that explains this very case.
+        ("saturated score renders two decimals, not a bare 1",
+         "AI (p 1)</button>" not in dom),
         ("fab summary counts flags and misses", "1 of 2 flagged, 1 over the scan limit" in dom),
     ]
 

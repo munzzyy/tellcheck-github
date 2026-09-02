@@ -12,11 +12,20 @@ async function refreshQuota() {
   if (seen !== today) return;
   if (lastQuota.meter === "degraded") {
     line.textContent = "Meter offline, scans unrestricted right now.";
+    // A bounded progress bar under "unrestricted" says the opposite of the copy.
+    bar.parentElement.hidden = true;
     return;
   }
   if (typeof lastQuota.used === "number") {
     line.textContent = `${lastQuota.used} of ${lastQuota.limit} free scans used today.`;
     bar.style.width = `${Math.min(100, (lastQuota.used / lastQuota.limit) * 100)}%`;
+    // Out of scans: say so on the button itself. Otherwise the popup looks
+    // ready to work and the refusal only shows up back on the GitHub tab.
+    if (lastQuota.used >= lastQuota.limit) {
+      const scan = document.getElementById("scan");
+      scan.disabled = true;
+      scan.textContent = "Daily limit reached";
+    }
   }
 }
 

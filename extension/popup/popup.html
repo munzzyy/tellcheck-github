@@ -8,11 +8,6 @@
       font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       color: #1f2328; background: #fff;
     }
-    @media (prefers-color-scheme: dark) {
-      body { color: #e6edf3; background: #0d1117; }
-      .quota { background: #161b22 !important; border-color: #30363d !important; }
-      button { background: #21262d; color: #e6edf3; border-color: #30363d; }
-    }
     h1 { font-size: 14px; margin: 0 0 8px; }
     .quota {
       border: 1px solid #d0d7de; border-radius: 8px; background: #f6f8fa;
@@ -26,8 +21,22 @@
       font: 600 12px/1.3 inherit; cursor: pointer; text-align: center;
     }
     button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    button[disabled] { cursor: default; opacity: 0.65; }
+    button.primary[disabled] { background: #6e7781; border-color: #6e7781; }
     button[hidden] { display: none; }
     .muted { opacity: 0.7; font-size: 12px; }
+
+    /* Dark last. It used to sit above the base rules, which have the same
+       specificity, so the light button background won in dark mode and the
+       secondary buttons rendered near-white text on near-white at 1.11:1.
+       .quota only escaped that because it carried !important. */
+    @media (prefers-color-scheme: dark) {
+      body { color: #e6edf3; background: #0d1117; }
+      .quota { background: #161b22; border-color: #30363d; }
+      button { background: #21262d; color: #e6edf3; border-color: #30363d; }
+      button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+      button[disabled] { color: #6e7681; border-color: #30363d; }
+    }
   </style>
 </head>
 <body>

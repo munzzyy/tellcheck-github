@@ -107,9 +107,11 @@
     if (result.flagged) {
       // An artifact hit can be flagged and p-less; the flag wins the chip.
       cls = "flag";
+      // The worker returns a bare 1 for a saturated score, which rendered as
+      // "(p 1)" next to siblings reading "(p 0.94)" and looked broken.
       label = result.p === null || result.p === undefined
         ? "Tellcheck: flags as AI (chat artifact)"
-        : `Tellcheck: flags as AI (p ${result.p})`;
+        : `Tellcheck: flags as AI (p ${Number(result.p).toFixed(2)})`;
     } else if (result.abstained) {
       cls = "abstain";
       label = result.language && result.language !== "en"
