@@ -167,8 +167,11 @@ async function meter(env, install, ip, count) {
     if (!net.allowed) {
       // The install counter already consumed this request. Hand it back so a
       // user behind a busy shared IP does not also lose their own allowance.
-      await bump(env.METER, `q:${install}:${day}`, count, limit, day, true).catch(() => {});
-      return { allowed: false, meter: "ok", used: inst.used - count, limit: ipLimit, reason: "network daily cap reached" };
+      // Report the counter the refund actually landed on, not arithmetic on a
+      // number that another concurrent request may already have moved.
+      const back = await bump(env.METER, `q:${install}:${day}`, count, limit, day, true).catch(() => null);
+      const used = back ? back.used : Math.max(0, inst.used - count);
+      return { allowed: false, meter: "ok", used, limit: ipLimit, reason: "network daily cap reached" };
     }
     return { allowed: true, meter: "ok", used: inst.used, limit };
   } catch (err) {

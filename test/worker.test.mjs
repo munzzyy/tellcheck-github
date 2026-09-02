@@ -309,6 +309,8 @@ test("ip cap blocks without eating the user's own allowance", async () => {
   assert.equal(blocked.status, 429);
   const body = await blocked.json();
   assert.equal(body.quota.reason, "network daily cap reached");
+  // Reported straight off the refunded counter, not inferred by arithmetic.
+  assert.equal(body.quota.used, 0, "a refunded request should report zero used");
   // user-b was refunded, so their own counter is still at zero.
   const envRoomy = { METER: env.METER, FREE_DAILY: "50", IP_DAILY: "99" };
   const after = await worker.fetch(scoreReq("user-b"), envRoomy);
