@@ -45,7 +45,7 @@ MOCK_RESPONSE = {
 FIXTURE = f"""<!doctype html>
 <html><head><meta charset="utf-8"><style>{CONTENT_CSS}</style></head>
 <body>
-<h1><span class="js-issue-title">Add comprehensive error handling</span></h1>
+<h1 data-component="PH_Title" class="prc-PageHeader-Title-p0Mgh"><span class="f1 text-normal markdown-title">Add comprehensive error handling</span><span class="sr-only"> - #<!-- -->42</span></h1>
 <div class="timeline-comment"><div class="comment-body">
   <p>This comprehensive PR delves into robust error handling.</p>
   <pre>this code block must never reach the scanner</pre>
@@ -144,6 +144,10 @@ def main():
     checks.append(("scan sent 5 texts", bool(sent) and len(sent) == 5))
     checks.append(("title prepended to first block",
                    bool(sent) and sent[0].startswith("Add comprehensive error handling")))
+    # The live h1 carries a screen-reader "- #15000" sibling; scoring the issue
+    # number as if it were prose would be noise.
+    checks.append(("issue number not scraped in with the title",
+                   bool(sent) and "#42" not in sent[0]))
     checks.append(("code blocks stripped from sent text",
                    bool(sent) and all("must never reach" not in t for t in sent)))
 

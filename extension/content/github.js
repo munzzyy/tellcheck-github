@@ -30,8 +30,15 @@
   ];
 
   const TITLE_SELECTORS = [
-    "h1 .js-issue-title",
+    // Current GitHub, checked against live PR and issue pages 2026-09-02:
+    // js-issue-title is gone from all of them. The React page header is the
+    // one constant, on both the pages that still render classic timeline
+    // comments and the fully React ones. Take the inner .markdown-title,
+    // because the h1 also holds a screen-reader "- #15000" sibling.
+    "h1[data-component='PH_Title'] .markdown-title",
     "[data-testid='issue-title']",
+    // Older generations, kept as fallbacks.
+    "h1 .js-issue-title",
     "bdi.js-issue-title",
     ".gh-header-title .js-issue-title",
   ];
