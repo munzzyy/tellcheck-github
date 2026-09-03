@@ -10,6 +10,8 @@ of bug where unit logic passes but the wiring never executes.
 """
 import http.server
 import json
+import os
+import shutil
 import pathlib
 import re
 import subprocess
@@ -106,6 +108,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
 
+def browser():
+    """Chromium goes by different names depending on the box and the CI image."""
+    override = os.environ.get("CHROMIUM")
+    names = [override] if override else ["chromium", "chromium-browser", "google-chrome", "google-chrome-stable"]
+    for n in names:
+        if n and shutil.which(n):
+            return n
+    sys.exit(f"no chromium binary found (tried: {', '.join(n for n in names if n)})")
+
+
 def main():
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
@@ -113,7 +125,7 @@ def main():
 
     url = f"http://127.0.0.1:{port}/someowner/somerepo/pull/1"
     dom = subprocess.run(
-        ["chromium", "--headless=new", "--disable-gpu", "--no-sandbox",
+        [browser(), "--headless=new", "--disable-gpu", "--no-sandbox",
          f"--user-data-dir=/tmp/claude-1000/tellcheck-github-smoke-profile",
          "--virtual-time-budget=4000", "--dump-dom", url],
         capture_output=True, text=True, timeout=60,

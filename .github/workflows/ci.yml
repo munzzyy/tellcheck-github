@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Lint the extension the way AMO does
+        run: npx --yes web-ext@10 lint --source-dir extension
+
+      - name: Syntax-check the worker and extension sources
+        run: |
+          for f in worker/src/index.js extension/*.js extension/*/*.js; do
+            [ -f "$f" ] && node --check "$f"
+          done
+
+      # The worker suite imports the detector, which is private and not in this
+      # repo (see "What is not in this repository"), so it cannot run here. The
+      # DOM smoke test can: it drives the real content script against a
+      # GitHub-shaped page with a mocked scoring response.
+      - name: Content script smoke test
+        env:
+          CHROMIUM: google-chrome
+        run: python3 test/content_smoke.py

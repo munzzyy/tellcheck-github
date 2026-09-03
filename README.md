@@ -1,85 +1,122 @@
 # Tellcheck for GitHub
 
-[Install for Firefox](https://addons.mozilla.org/en-US/firefox/addon/tellcheck-for-github/)
-· [How it's measured](https://tellcheck-github.pages.dev/eval)
-· [Privacy](https://tellcheck-github.pages.dev/privacy)
+**Reads the pull request before you do, and tells you how much of it sounds like a language model wrote it.**
 
-Browser extension that flags likely AI-generated pull requests and issues on GitHub,
-for maintainers enforcing no-AI or disclosure policies. The classifier (the noslop
-engine) runs server-side on a Cloudflare Worker; the extension is a thin client that
-sends text on demand and draws badges.
+[![CI](https://github.com/munzzyy/tellcheck-github/actions/workflows/ci.yml/badge.svg)](https://github.com/munzzyy/tellcheck-github/actions/workflows/ci.yml)
+[![Mozilla Add-on](https://img.shields.io/amo/v/tellcheck-for-github)](https://addons.mozilla.org/en-US/firefox/addon/tellcheck-for-github/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+> **Install:** [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/tellcheck-for-github/).
+> Free, no account, 30 scored comments a day.
+
+![A GitHub pull request with Tellcheck badges: the description flagged as AI with the signal breakdown open listing buzzword hits and stock phrases, and a human reply below it marked no detection](site/shots/detail-dark.png)
+
+Click scan on any pull request or issue. Every comment gets a badge, and every badge opens
+to show the actual signals behind it: which buzzwords fired, which stock phrases, how
+uniform the sentence lengths are. On a repo's pull request list you can scan up to 25 open
+PRs at once.
+
+![Scanning a pull request, opening the breakdown, then batch scanning a repo's open PR list](site/shots/demo.gif)
+
+## Why this exists
+
+Codeberg, Godot, OpenJDK, Rust and Ghostty all restricted AI-generated contributions during
+2026. Whichever way a project lands on it, enforcing the decision still means a human reads
+every submission and forms a private opinion about who wrote it. This does the first read
+and shows its work.
+
+It is a triage tool. Nobody can prove authorship of text after the fact, including this,
+and a maintainer who treats a red badge as a verdict will eventually accuse a real person
+of something they did not do.
+
+## What it actually claims
+
+Detectors get sold on a single accuracy number that falls apart the moment the text is not
+from the generator they tuned on. Here is the whole picture instead, measured on held-out
+sets:
+
+| Held-out set | What it is | AUROC | Catch rate at 5% FPR |
+|---|---|---|---|
+| DetectRL-X | 2025-era generators (DeepSeek-V3 and similar), plus paraphrase and zero-width-space attacks | 0.983 | 92% |
+| RAID-test | 2022-23 generators (GPT-2/3, Cohere, MPT, Mistral) | 0.89 | 67% |
+| MAGE (paraphrase) | GPT text run through a paraphraser, out of domain | 0.81 | 39% |
+| humanizer-attack | Ghostbuster "undetectable" essays | | 99% caught |
+
+The number that matters most is the one that goes the other way. On 4,300 held-out essays
+by non-native English speakers, real writing by real people, **7.8% come back flagged**.
+That is the honest ceiling on trusting any single result, and it is why the advice never
+changes: judge the contribution, not the author.
+
+The threshold targets a 5% false-positive rate across a broad mix of English. Under roughly
+twenty words, or on text it reads as anything other than English, it does not guess at all.
+It says it abstained and tells you why. A one-line "lgtm" gets no verdict, because no
+honest detector can give one. The [measurement page](https://tellcheck-github.pages.dev/eval)
+carries the corpus, the calibration and the named failure modes.
+
+## What leaves your browser
+
+Nothing, until you click scan. Then the visible text of that PR or issue goes over HTTPS to
+the scoring worker with code blocks stripped, plus a random id that counts your daily free
+scans and rotates every day. The text is scored in memory and dropped. It is not stored,
+not logged in full, and not tied to your GitHub account.
+
+The extension asks for one permission, `storage`, and runs on `github.com` only. If you add
+a GitHub token to raise the batch-scan rate limit, it stays on your device and is sent only
+to `api.github.com`. The [privacy policy](https://tellcheck-github.pages.dev/privacy) is the
+long version, and the code that backs it is in this repo.
+
+## Layout
 
 ```
-extension/          the MV3 extension (Firefox-first)
-  manifest.json     includes the AMO-required data_collection_permissions key
-  background.js     all network calls live here (scoring API, GitHub API, ExtPay)
-  content/          scan button, badges, signal panels on github.com
-  popup/ options/   quota display, CSV export, settings
-worker/             the scoring API
-  src/index.js      POST /score with per-install daily metering (KV)
-  src/detector-core.js   PRIVATE, gitignored; synced from ~/Projects/noslop
-site/               landing page + privacy policy (deploy as a Pages project)
-vendor/ExtPay.js    unmodified ExtensionPay client (AGPLv3), staged for a paid version
-tools/              sync_detector.py, gen_icons.py, package.sh
-test/               worker test suite (node --test)
+extension/          the MV3 extension, Firefox first
+  content/          the scan button, badges and signal panels on github.com
+  background.js     every network call lives here
+  popup/ options/   quota, CSV export, settings
+worker/             the scoring API on Cloudflare Workers
+  src/index.js      POST /score, metered per install and per IP in a Durable Object
+site/               the landing page, measurement page and privacy policy
+test/               worker suite and a headless DOM smoke test
 ```
 
 ## Development
 
 ```
 python3 tools/sync_detector.py        # pull the private detector into the worker
-node --test test/worker.test.mjs      # 22 tests, no network needed
-python3 test/content_smoke.py         # headless DOM smoke test (needs chromium)
-bash tools/package.sh                 # lint + build dist/tellcheck-github-x.y.z.zip
+node --test test/worker.test.mjs      # 23 tests, no network
+python3 test/content_smoke.py         # 16 checks, drives the real content script in headless chromium
+bash tools/package.sh                 # lint and build dist/
 ```
 
-Load the extension for manual testing: Firefox -> about:debugging -> This Firefox ->
-Load Temporary Add-on -> pick extension/manifest.json.
+To try a build: Firefox, `about:debugging`, This Firefox, Load Temporary Add-on, pick
+`extension/manifest.json`.
 
-## Deploy (the worker)
+Deploying the worker needs a Cloudflare account:
 
 ```
 cd worker
 wrangler kv namespace create QUOTA    # paste the printed id into wrangler.toml
-wrangler deploy                       # prints the live URL
+wrangler deploy
 ```
 
-Put the live URL into extension/config.js API_URL if it differs from the default.
-
-## Domain and cutover
-
-Buy `tellcheck.dev` when ready (a subdomain of it, or a Pages custom domain, can replace
-`tellcheck-github.pages.dev` with a one-line edit to `extension/config.js` and the site).
-`redirects/` holds a stub worker and a `_redirects` file that 301 the old `slopscreen-api`
-worker and `slopscreen.pages.dev` site to the new addresses; see `redirects/README.md`.
-
-## Monetization
-
-ExtensionPay (5% + Stripe fees, pays into the connected Stripe account). v0.1 ships
-with payments fully OFF: vendor/ExtPay.js is NOT in the manifest or the zip, so the
-extension carries no payment code, no extensionpay.com permission, and no upgrade UI.
-To enable in a later version: register on extensionpay.com, set EXTPAY_ID in
-extension/config.js, copy vendor/ExtPay.js back to extension/lib/, and restore the
-manifest entries (background scripts list, extensionpay.com content script + host
-permission). background.js already guards every ExtPay touchpoint on typeof, and falls
-back to a 72h-cached paid status when extensionpay.com is unreachable.
-ExtensionPay has no server-side validation API, so paid status is client-asserted; the
-worker bounds abuse with a hard daily ceiling per install. The private detector never
-ships to clients either way.
-
-## The one rule
-
-Every surfaced score says "signal, not proof". The classifier abstains under 20 words
-and is calibrated to a 5% false-positive operating point. Do not weaken that framing in
-any UI copy; false accusations are the product's biggest risk.
+Then put the live URL in `extension/config.js` if it differs from the default.
 
 ## What is not in this repository
 
-The detector itself. `worker/src/detector-core.js` is synced in at build time from a
-private engine and is gitignored; everything else about how it is called, metered, and
-rendered is here. That is the point of the privacy policy saying to read the code: the
-claims about what the server does with your text are checkable, the model is not open.
+The detector. `worker/src/detector-core.js` is synced in at build time from a private
+engine and is gitignored, so the worker suite does not run in CI here either. Everything
+about how that engine is called, metered, rate limited and rendered is in this repo, which
+is the point of the privacy policy telling you to read the code. The claims about what the
+server does with your text are checkable. The model is not open.
+
+`vendor/ExtPay.js` is the unmodified ExtensionPay client, staged for a paid tier that does
+not exist yet. It is not in the manifest and not in the shipped zip, so the extension you
+install carries no payment code, no `extensionpay.com` permission and no upgrade button.
+
+## The one rule
+
+Every score says signal, not proof. Do not weaken that framing anywhere in the UI. A false
+accusation costs a contributor far more than a missed bot costs a maintainer.
 
 ## License
 
-MIT, see `LICENSE`.
+MIT, see [LICENSE](LICENSE).
