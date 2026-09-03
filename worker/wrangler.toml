@@ -11,10 +11,6 @@ compatibility_date = "2026-08-01"
 FREE_DAILY = "30"
 IP_DAILY = "300"
 
-[[kv_namespaces]]
-binding = "QUOTA"
-id = "3f994a79cea54baa843ce16076761cc1"
-
 # Atomic daily counters. KV get-then-put races under concurrent requests, which
 # made the daily caps bypassable; a Durable Object instance is single-threaded
 # per key so its check-and-increment is exact. SQLite-backed class, which is
@@ -26,3 +22,7 @@ class_name = "MeterDO"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["MeterDO"]
+
+[[kv_namespaces]]
+binding = "QUOTA"
+id = "3f994a79cea54baa843ce16076761cc1"
