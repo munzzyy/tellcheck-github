@@ -1,5 +1,9 @@
 # Tellcheck for GitHub
 
+[Install for Firefox](https://addons.mozilla.org/en-US/firefox/addon/tellcheck-for-github/)
+· [How it's measured](https://tellcheck-github.pages.dev/eval)
+· [Privacy](https://tellcheck-github.pages.dev/privacy)
+
 Browser extension that flags likely AI-generated pull requests and issues on GitHub,
 for maintainers enforcing no-AI or disclosure policies. The classifier (the noslop
 engine) runs server-side on a Cloudflare Worker; the extension is a thin client that
@@ -68,3 +72,14 @@ ships to clients either way.
 Every surfaced score says "signal, not proof". The classifier abstains under 20 words
 and is calibrated to a 5% false-positive operating point. Do not weaken that framing in
 any UI copy; false accusations are the product's biggest risk.
+
+## What is not in this repository
+
+The detector itself. `worker/src/detector-core.js` is synced in at build time from a
+private engine and is gitignored; everything else about how it is called, metered, and
+rendered is here. That is the point of the privacy policy saying to read the code: the
+claims about what the server does with your text are checkable, the model is not open.
+
+## License
+
+MIT, see `LICENSE`.

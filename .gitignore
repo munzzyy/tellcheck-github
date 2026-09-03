@@ -1,6 +1,9 @@
 # The detector is the private asset; it is synced in at build time, never committed.
 worker/src/detector-core.js
 dist/
+
+# Launch and marketing working files are kept out of the public repo.
+launch/
 node_modules/
 .wrangler/
 __pycache__/
