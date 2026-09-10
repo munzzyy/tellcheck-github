@@ -8,8 +8,8 @@ compatibility_date = "2026-08-01"
 #
 
 [vars]
-FREE_DAILY = "30"
-IP_DAILY = "300"
+FREE_DAILY = "100"
+IP_DAILY = "500"
 
 # Atomic daily counters. KV get-then-put races under concurrent requests, which
 # made the daily caps bypassable; a Durable Object instance is single-threaded

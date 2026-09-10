@@ -58,7 +58,7 @@ test("short text abstains rather than guesses", () => {
   assert.equal(s.flagged, false);
 });
 
-test("scoring a paid-size batch works and meters", async () => {
+test("scoring a two-text batch works and meters", async () => {
   const env = { QUOTA: mockKV() };
   const r = await worker.fetch(req({
     install: "test-install-1",
@@ -73,29 +73,29 @@ test("scoring a paid-size batch works and meters", async () => {
   assert.equal(d.quota.meter, "ok");
 });
 
-test("free daily limit enforced at 30", async () => {
+test("daily limit enforced at the default 100", async () => {
   const env = { QUOTA: mockKV() };
   const texts = Array.from({ length: 10 }, (_, i) => ({ id: i, text: HUMAN_TEXT }));
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 10; i++) {
     const r = await worker.fetch(req({ install: "cap-test", texts }), env);
     assert.equal((await r.json()).ok, true, `batch ${i} should pass`);
   }
-  const r4 = await worker.fetch(req({ install: "cap-test", texts }), env);
-  assert.equal(r4.status, 429);
-  const d = await r4.json();
+  const over = await worker.fetch(req({ install: "cap-test", texts }), env);
+  assert.equal(over.status, 429);
+  const d = await over.json();
   assert.equal(d.error, "quota");
-  assert.match(d.quota.reason, /free daily limit/);
+  assert.match(d.quota.reason, /daily limit/);
 });
 
-test("a client-asserted paid claim is ignored, free limit still applies", async () => {
-  // There is no paid tier wired server-side (S1): body.paid must not raise
-  // the limit, since nothing verifies the claim.
+test("unknown client fields cannot raise the limit", async () => {
+  // Guards the invariant behind the privacy policy: nothing a client asserts
+  // about itself (here a leftover paid:true from old builds) changes metering.
   const env = { QUOTA: mockKV(), FREE_DAILY: "10" };
   const texts = Array.from({ length: 10 }, (_, i) => ({ id: i, text: HUMAN_TEXT }));
   const r1 = await worker.fetch(req({ install: "paid-test", texts, paid: true }), env);
   assert.equal((await r1.json()).ok, true, "first batch of 10 should pass at the 10 limit");
   const r2 = await worker.fetch(req({ install: "paid-test", texts, paid: true }), env);
-  assert.equal(r2.status, 429, "a client claiming paid must still hit the free limit");
+  assert.equal(r2.status, 429, "an unknown field must not lift the daily limit");
 });
 
 test("a rotated install id still hits the per-IP cap", async () => {

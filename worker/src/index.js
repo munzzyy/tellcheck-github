@@ -7,18 +7,18 @@
 //     -> { ok, results: [{ id, p, verdict, flagged, words, truncated,
 //                          score_per_1k, signals }], quota }
 //
-// Free quota is metered per install id AND per source IP per UTC day, counted
-// in a Durable Object so the check and the increment are atomic (KV is not:
-// see the note above meter()). The install id alone is trivial to rotate, so a
-// coarse IP cap sits behind it as a backstop; either ceiling being hit blocks
-// the request. If the counter is missing or unavailable the meter degrades OPEN
-// on purpose: scoring keeps working and the response says meter:"degraded"
-// instead of silently lying about enforcement. A metering outage should cost
-// pennies, not break users.
+// The daily quota is metered per install id AND per source IP per UTC day,
+// counted in a Durable Object so the check and the increment are atomic (KV is
+// not: see the note above meter()). The install id alone is trivial to rotate,
+// so a coarse IP cap sits behind it as a backstop; either ceiling being hit
+// blocks the request. If the counter is missing or unavailable the meter
+// degrades OPEN on purpose: scoring keeps working and the response says
+// meter:"degraded" instead of silently lying about enforcement. A metering
+// outage should cost pennies, not break users.
 //
-// There is no paid tier wired up (no server can verify an ExtensionPay
-// claim without a paid API we don't have), so the worker does not read or
-// trust any client-asserted paid flag. Everyone gets the same free cap.
+// There are no tiers. Everyone gets the same cap, and the worker ignores any
+// extra fields in the request body; nothing a client asserts about itself can
+// change its limit.
 //
 // CPU budget: the detector costs ~1ms per 200 words. Texts are truncated at
 // MAX_WORDS_PER_TEXT and each request is capped at MAX_WORDS_PER_REQUEST so a
@@ -34,8 +34,8 @@ const MAX_CHARS_PER_TEXT = 12000; // ~1500 words at a generous 8 chars/word
 const MAX_BODY_BYTES = 512 * 1024;
 
 const DEFAULTS = {
-  FREE_DAILY: 30,   // scored texts per install per day
-  IP_DAILY: 300,    // coarser backstop per source IP; blunts install-id rotation
+  FREE_DAILY: 100,  // scored texts per install per day
+  IP_DAILY: 500,    // coarser backstop per source IP; blunts install-id rotation
 };
 
 const CORS = {
@@ -147,8 +147,8 @@ async function bump(ns, key, count, limit, day, refund = false) {
 // from concurrent isolates all read the same pre-increment value, so a burst of
 // parallel requests every one of them passes the check and the stored counter
 // moves by one. That was live (12 parallel scans cost 1 unit of quota), which
-// made both the 30/day and 300/day ceilings bypassable from a single connection
-// without rotating anything. The Durable Object path below is exact.
+// made both the per-install and per-IP ceilings bypassable from a single
+// connection without rotating anything. The Durable Object path below is exact.
 //
 // meterKV stays as the fallback for an environment without the binding: it still
 // stops sequential abuse, and a metering outage must never stop scoring.
@@ -161,7 +161,7 @@ async function meter(env, install, ip, count) {
   try {
     const inst = await bump(env.METER, `q:${install}:${day}`, count, limit, day);
     if (!inst.allowed) {
-      return { allowed: false, meter: "ok", used: inst.used, limit, reason: "free daily limit reached" };
+      return { allowed: false, meter: "ok", used: inst.used, limit, reason: "daily limit reached" };
     }
     const net = await bump(env.METER, `qip:${ip}:${day}`, count, ipLimit, day);
     if (!net.allowed) {
@@ -195,7 +195,7 @@ async function meterKV(env, install, ip, count) {
       env.QUOTA.get(ipKey).then((v) => Number(v) || 0),
     ]);
     if (used + count > limit) {
-      return { allowed: false, meter: "ok", used, limit, reason: "free daily limit reached" };
+      return { allowed: false, meter: "ok", used, limit, reason: "daily limit reached" };
     }
     if (ipUsed + count > ipLimit) {
       return { allowed: false, meter: "ok", used, limit: ipLimit, reason: "network daily cap reached" };
