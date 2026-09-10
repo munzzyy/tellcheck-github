@@ -196,7 +196,7 @@
       }).catch(() => null);
       if (!resp || !resp.ok) {
         b.textContent = resp && resp.error === "quota"
-          ? "Daily free scans used up"
+          ? "Daily scan limit reached"
           : "Scan failed (API unreachable?)";
         return;
       }
@@ -235,7 +235,7 @@
       if (!resp || !resp.ok) {
         b.textContent =
           resp && (resp.error === "github" || resp.error === "network") ? (resp.detail || "Network failed") :
-          resp && resp.error === "quota" ? "Daily free scans used up" :
+          resp && resp.error === "quota" ? "Daily scan limit reached" :
           resp && resp.error === "no_open_prs" ? "No open PRs" :
           "Batch scan failed";
         return;

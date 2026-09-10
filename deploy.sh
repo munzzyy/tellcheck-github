@@ -5,9 +5,9 @@
 #
 #   bash deploy.sh
 #
-# This does NOT submit the extension to AMO (that needs your Mozilla account) and
-# does NOT touch payments (v0.1 ships free). After deploy, the extension zip is
-# rebuilt against the live worker URL; upload dist/tellcheck-github-*.zip to AMO.
+# This does NOT submit the extension to AMO (that needs your Mozilla account).
+# After deploy, the extension zip is rebuilt against the live worker URL;
+# upload dist/tellcheck-github-*.zip to AMO.
 set -euo pipefail
 cd "$(dirname "$0")"
 PAGES=tellcheck-github

@@ -5,19 +5,10 @@
 // read the page and draw badges. Page text leaves the browser ONLY when the
 // user clicks scan (or turns auto-scan on in options).
 //
-// The v0.1 build ships with payments off: lib/ExtPay.js is not loaded by the
-// manifest, so every ExtPay touchpoint is guarded on typeof. Enabling
-// payments later = set EXTPAY_ID, re-add the lib + extensionpay.com entries
-// to the manifest (see README).
-/* global ExtPay, TELLCHECK */
+/* global TELLCHECK */
 "use strict";
 
 const api = globalThis.browser ?? globalThis.chrome;
-const extpayAvailable = () => TELLCHECK.EXTPAY_ID && typeof ExtPay !== "undefined";
-
-if (extpayAvailable()) {
-  ExtPay(TELLCHECK.EXTPAY_ID).startBackground();
-}
 
 // The meter id rotates at UTC midnight, matching the daily quota exactly.
 // Nothing about an install is trackable across days.
@@ -39,40 +30,20 @@ async function getSettings() {
   };
 }
 
-// Paid status. With payments unconfigured everything is free tier and no
-// upgrade UI shows. When ExtPay is unreachable, fall back to the last known
-// answer for three days so a paying user is not silently demoted offline.
-async function paidStatus() {
-  if (!extpayAvailable()) return { configured: false, paid: false };
-  try {
-    const user = await ExtPay(TELLCHECK.EXTPAY_ID).getUser();
-    const paid = !!user.paid;
-    await api.storage.local.set({ paidCache: { paid, at: Date.now() } });
-    return { configured: true, paid };
-  } catch {
-    const { paidCache } = await api.storage.local.get("paidCache");
-    const fresh = paidCache && Date.now() - paidCache.at < 72 * 3600 * 1000;
-    return { configured: true, paid: fresh ? paidCache.paid : false, degraded: true };
-  }
-}
-
 async function scoreTexts(texts) {
-  const [install, settings, paid] = await Promise.all([
-    getMeterId(), getSettings(), paidStatus(),
-  ]);
+  const [install, settings] = await Promise.all([getMeterId(), getSettings()]);
   let resp;
   try {
     resp = await fetch(`${settings.apiUrl}/score`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ install, texts, paid: paid.paid }),
+      body: JSON.stringify({ install, texts }),
     });
   } catch {
     return { ok: false, error: "network", detail: "scoring server unreachable" };
   }
   const data = await resp.json().catch(() => ({ ok: false, error: "bad_response" }));
   data.httpStatus = resp.status;
-  data.paidStatus = paid;
   // Remember the quota line so the popup can show it without a network call.
   if (data.quota) await api.storage.local.set({ lastQuota: data.quota, lastQuotaAt: Date.now() });
   return data;
@@ -129,13 +100,8 @@ api.runtime.onMessage.addListener((msg) => {
       return scoreTexts(msg.texts).catch(() => ({ ok: false, error: "internal" }));
     case "batch":
       return batchScan(msg.owner, msg.repo).catch(() => ({ ok: false, error: "internal" }));
-    case "paid-status":
-      return paidStatus();
     case "settings":
       return getSettings();
-    case "open-payment":
-      if (extpayAvailable()) ExtPay(TELLCHECK.EXTPAY_ID).openPaymentPage();
-      return Promise.resolve({ ok: true });
     default:
       return undefined;
   }

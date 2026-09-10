@@ -17,7 +17,7 @@ async function refreshQuota() {
     return;
   }
   if (typeof lastQuota.used === "number") {
-    line.textContent = `${lastQuota.used} of ${lastQuota.limit} free scans used today.`;
+    line.textContent = `${lastQuota.used} of ${lastQuota.limit} scans used today.`;
     bar.style.width = `${Math.min(100, (lastQuota.used / lastQuota.limit) * 100)}%`;
     // Out of scans: say so on the button itself. Otherwise the popup looks
     // ready to work and the refusal only shows up back on the GitHub tab.
@@ -26,15 +26,6 @@ async function refreshQuota() {
       scan.disabled = true;
       scan.textContent = "Daily limit reached";
     }
-  }
-}
-
-async function wirePaid() {
-  const status = await api.runtime.sendMessage({ type: "paid-status" }).catch(() => null);
-  const up = document.getElementById("upgrade");
-  if (status && status.configured && !status.paid) {
-    up.hidden = false;
-    up.onclick = () => api.runtime.sendMessage({ type: "open-payment" });
   }
 }
 
@@ -75,5 +66,4 @@ document.getElementById("scan").onclick = async () => {
 document.getElementById("options").onclick = () => api.runtime.openOptionsPage();
 
 refreshQuota();
-wirePaid();
 wireCsv();
