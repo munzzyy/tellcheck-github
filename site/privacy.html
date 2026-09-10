@@ -16,7 +16,7 @@
   </header>
 
   <h1>Tellcheck for GitHub privacy policy</h1>
-  <p>Last updated August 30, 2026.</p>
+  <p>Last updated September 9, 2026.</p>
 
   <h2>The short version</h2>
   <p>When you click scan, the text of the pull request or issue you are looking at is sent
@@ -32,7 +32,7 @@
   <h2>What is sent, and when</h2>
   <p>Nothing is sent anywhere until you click a scan button, or turn on auto-scan in the
   options (it ships off). A scan sends: the visible text of the PR or issue (code blocks
-  removed), and a random meter id like <code>7f3a...</code> used to count your daily free
+  removed), and a random meter id like <code>7f3a...</code> used to count your daily
   scans. The meter id is generated on your device, is not tied to your name, GitHub
   account, email, or anything else, and a new one is generated every day, so scans on
   different days cannot be connected to each other.</p>
@@ -42,8 +42,8 @@
   against a rotated meter id, a per-day counter per source IP address; both are deleted
   within 48 hours. It also keeps standard short-lived infrastructure logs (Cloudflare's).
   Scanned text is processed in memory and discarded. No database of scanned content exists.
-  There is no server-side "paid" flag either; the worker does not read or trust any
-  client-asserted payment claim, because nothing today can verify one.</p>
+  The server also ignores anything else a client claims about itself; no field in the
+  request can identify you or change your limit.</p>
 
   <h2>Batch scans</h2>
   <p>Scanning a repo's open PRs calls GitHub's public API from your browser. If you add a
@@ -59,9 +59,8 @@
   source to back it.</p>
 
   <h2>Payments</h2>
-  <p>The current version has no payment features. If a paid tier is added later, payments
-  would be handled by ExtensionPay and Stripe; your payment details would go to Stripe,
-  not to Tellcheck, and this policy will be updated first.</p>
+  <p>There are none. The extension is free, contains no payment code, and talks to no
+  payment processor.</p>
 
   <h2>What Tellcheck for GitHub never does</h2>
   <p>No browsing history collection, no analytics or tracking pixels, no selling or

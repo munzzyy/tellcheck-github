@@ -32,7 +32,8 @@ Private by design. Nothing leaves your browser until you click scan (auto-scan e
 ships off). Scanned text is scored over HTTPS and discarded, never stored. No accounts,
 no tracking. Optional GitHub token for batch scans stays on your device.
 
-Free, with a cap of 30 scored texts a day per install. No account, no paid tier yet.
+Free, with a cap of 100 scored texts a day per install. No account, no paid tier,
+nothing for sale.
 
 ## Categories (AMO consumer list; pick up to 3)
 Web Development (primary), Privacy & Security
@@ -54,7 +55,7 @@ Munzzyy1@proton.me
 The extension sends the text of the currently viewed GitHub PR/issue to our scoring API
 (a Cloudflare Worker) when the user clicks scan; the API returns a statistical score and
 the matched signals, and does not store the text. No code is loaded remotely; no
-analytics; no payment code in this version. The data_collection_permissions key declares
+analytics; no payment code. The data_collection_permissions key declares
 websiteContent (the scanned text) and, as optional, technicalAndInteraction (a random
 meter id sent with scans for the daily free-scan counter; it rotates every UTC day, so
 nothing is trackable across days).

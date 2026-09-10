@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > **Install:** [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/tellcheck-for-github/).
-> Free, no account, 30 scored comments a day.
+> Free, no account, 100 scored comments a day.
 
 ![A GitHub pull request with Tellcheck badges: the description flagged as AI with the signal breakdown open listing buzzword hits and stock phrases, and a human reply below it marked no detection](site/shots/detail-dark.png)
 
@@ -56,7 +56,7 @@ carries the corpus, the calibration and the named failure modes.
 ## What leaves your browser
 
 Nothing, until you click scan. Then the visible text of that PR or issue goes over HTTPS to
-the scoring worker with code blocks stripped, plus a random id that counts your daily free
+the scoring worker with code blocks stripped, plus a random id that counts your daily
 scans and rotates every day. The text is scored in memory and dropped. It is not stored,
 not logged in full, and not tied to your GitHub account.
 
@@ -107,10 +107,6 @@ engine and is gitignored, so the worker suite does not run in CI here either. Ev
 about how that engine is called, metered, rate limited and rendered is in this repo, which
 is the point of the privacy policy telling you to read the code. The claims about what the
 server does with your text are checkable. The model is not open.
-
-`vendor/ExtPay.js` is the unmodified ExtensionPay client, staged for a paid tier that does
-not exist yet. It is not in the manifest and not in the shipped zip, so the extension you
-install carries no payment code, no `extensionpay.com` permission and no upgrade button.
 
 ## The one rule
 
