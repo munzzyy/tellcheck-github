@@ -78,7 +78,9 @@
     blocks.forEach((el, i) => {
       let text = proseOf(el);
       if (i === 0 && titleEl) text = `${titleEl.textContent.trim()}\n\n${text}`;
-      if (text) items.push({ id: `b${i}`, text, el });
+      // Block 0 is the PR/issue description: longer-form genre, kind "pr".
+      // Everything after it is a thread comment.
+      if (text) items.push({ id: `b${i}`, text, el, kind: i === 0 ? "pr" : "comment" });
     });
     return items.slice(0, 25); // worker caps at 25 texts per request
   }
@@ -133,6 +135,16 @@
     return chip;
   }
 
+  // Secondary chip for the comment-style layer. A separate signal from the
+  // detector's p: it scores genre tells (length, comma density, contractions,
+  // whether the text points at anything), never the statistical score, and
+  // the two are never merged into one number.
+  function styleChipFor() {
+    const chip = el("button", `${NS}-chip ${NS}-style`, "Tellcheck: reads assistant-drafted (style)");
+    chip.type = "button";
+    return chip;
+  }
+
   function notScoredChip() {
     const chip = el("span", `${NS}-chip ${NS}-abstain`, "Tellcheck: not scored (scan limit)");
     chip.title = "This block was over the per-scan limit. Scan again to cover the rest.";
@@ -151,6 +163,16 @@
       for (const s of result.signals) ul.appendChild(el("li", null, s));
       panel.appendChild(ul);
     }
+    if (result.style_flag) {
+      panel.appendChild(el("div", `${NS}-panel-style`,
+        "Separate signal: the comment style reads assistant-drafted " +
+        `(${result.style_points} genre points, flags above 7). ` +
+        "This scores the genre, not the author, and is measured against one " +
+        "drafting pipeline; easy to evade, so absence means nothing."));
+      const ul = el("ul", `${NS}-signals`);
+      for (const s of result.style_reasons || []) ul.appendChild(el("li", null, s));
+      panel.appendChild(ul);
+    }
     panel.appendChild(el("div", `${NS}-panel-foot`,
       "A statistical signal, not proof. The 5% false-positive point is measured " +
       "on longer text; short comments run less certain. " +
@@ -161,21 +183,32 @@
   let panelSeq = 0;
 
   function attachBadge(block, result) {
-    const chip = chipFor(result);
+    const chips = [chipFor(result)];
+    // Style-only hit: the detect chip stays primary and reads clean; the
+    // style layer gets its own secondary chip. When both fire, the detect
+    // chip alone carries the badge row and the panel shows both breakdowns.
+    if (result.style_flag && !result.flagged) chips.push(styleChipFor());
     const panel = panelFor(result);
     panel.hidden = true;
-    // The chip is a disclosure button. Without these it announces as a plain
-    // button and never says whether the breakdown is open, which is the whole
+    // The chips are disclosure buttons. Without these they announce as plain
+    // buttons and never say whether the breakdown is open, which is the whole
     // "reasons shown" part of the product.
     panel.id = `${NS}-panel-${++panelSeq}`;
-    chip.setAttribute("aria-controls", panel.id);
-    chip.setAttribute("aria-expanded", "false");
-    chip.addEventListener("click", () => {
-      panel.hidden = !panel.hidden;
-      chip.setAttribute("aria-expanded", String(!panel.hidden));
-    });
-    block.el.insertAdjacentElement("beforebegin", chip);
-    chip.insertAdjacentElement("afterend", panel);
+    for (const chip of chips) {
+      chip.setAttribute("aria-controls", panel.id);
+      chip.setAttribute("aria-expanded", "false");
+      chip.addEventListener("click", () => {
+        panel.hidden = !panel.hidden;
+        for (const c of chips) c.setAttribute("aria-expanded", String(!panel.hidden));
+      });
+    }
+    block.el.insertAdjacentElement("beforebegin", chips[0]);
+    let last = chips[0];
+    for (const chip of chips.slice(1)) {
+      last.insertAdjacentElement("afterend", chip);
+      last = chip;
+    }
+    last.insertAdjacentElement("afterend", panel);
   }
 
   // ---------- scan flows ----------
@@ -193,7 +226,7 @@
       if (!texts.length) { b.textContent = "Nothing to scan here"; return; }
       const resp = await api.runtime.sendMessage({
         type: "scan",
-        texts: texts.map(({ id, text }) => ({ id, text })),
+        texts: texts.map(({ id, text, kind }) => ({ id, text, kind })),
       }).catch(() => null);
       if (!resp || !resp.ok) {
         b.textContent = resp && resp.error === "quota"

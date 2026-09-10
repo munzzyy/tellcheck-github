@@ -76,6 +76,7 @@ async function batchScan(owner, repo) {
   const texts = prs.map((pr) => ({
     id: String(pr.number),
     text: `${pr.title || ""}\n\n${pr.body || ""}`.trim(),
+    kind: "pr",
   })).filter((t) => t.text);
   const scored = await scoreTexts(texts);
   if (!scored.ok) return scored;

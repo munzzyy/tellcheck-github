@@ -42,11 +42,11 @@ async function wireCsv() {
       if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
       return `"${s.replace(/"/g, '""')}"`;
     };
-    const lines = [["number", "title", "author", "url", "p", "verdict", "flagged"].join(",")];
+    const lines = [["number", "title", "author", "url", "p", "verdict", "flagged", "style_flag"].join(",")];
     for (const row of lastBatch.rows) {
       const r = row.result || {};
       lines.push([row.number, esc(row.title), esc(row.author), esc(row.url),
-        r.p ?? "", esc(r.verdict), r.flagged ? "yes" : "no"].join(","));
+        r.p ?? "", esc(r.verdict), r.flagged ? "yes" : "no", r.style_flag ? "yes" : "no"].join(","));
     }
     const a = document.createElement("a");
     a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(lines.join("\n"));

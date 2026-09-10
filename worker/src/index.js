@@ -3,9 +3,16 @@
 // The detector (Cole's noslop engine) lives server-side only; the extension is
 // a thin client. One route does the work:
 //
-//   POST /score   { install: "uuid", texts: [{ id, text }] }
+//   POST /score   { install: "uuid", texts: [{ id, text, kind }] }
 //     -> { ok, results: [{ id, p, verdict, flagged, words, truncated,
-//                          score_per_1k, signals }], quota }
+//                          score_per_1k, signals,
+//                          style_flag, style_points, style_reasons }], quota }
+//
+// kind is "comment" or "pr" and picks the genre band for the comment-style
+// layer (style_*): "pr" relaxes the comment-specific length and question
+// checks, so an unknown or missing kind defaults to "pr" and fails safe on
+// catch rate, never on false positives. The style fields are a separate
+// signal from p/flagged and are never folded into them.
 //
 // The daily quota is metered per install id AND per source IP per UTC day,
 // counted in a Durable Object so the check and the increment are atomic (KV is
@@ -26,6 +33,14 @@
 // tokenizes as ~1 "word", so MAX_CHARS_PER_TEXT bounds raw length too, ahead
 // of any word-count math.
 import Noslop from "./detector-core.js";
+import { commentTells } from "./comment-tells.js";
+
+// Validated operating point for the comment-style layer: flag when points > 7.
+// Repo-grouped 5-fold CV; pooled held-out at this point: 25.0% TPR on
+// assistant-drafted comments, 0.92% FPR on 5,316 real GitHub comments, 0/84
+// false positives on the realworld-human set. Threshold 5 (the noslop CLI
+// default) fails the label-shuffle null test here; never lower this to 5.
+const STYLE_THRESHOLD = 7;
 
 const MAX_TEXTS = 25;
 const MAX_WORDS_PER_TEXT = 1500;
@@ -95,9 +110,10 @@ export function topSignals(r) {
   return out.slice(0, 5);
 }
 
-export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT) {
+export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT, kind = "pr") {
   const [clipped, truncated] = truncateWords(text, Math.min(maxWords, MAX_WORDS_PER_TEXT));
   const r = Noslop.analyze(clipped, { markdown: true });
+  const style = commentTells(clipped, kind === "comment" ? "comment" : "pr");
   const p = r.detect_p; // null = abstained (short text / non-English)
   const flagged = typeof r.detect_verdict === "string" && r.detect_verdict.startsWith("flags as AI");
   const artifact = !!(r.ai_artifacts && r.ai_artifacts.length);
@@ -128,6 +144,9 @@ export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT) {
     language: r.language,
     score_per_1k: r.score_per_1k,
     signals: topSignals(r),
+    style_flag: style.points > STYLE_THRESHOLD,
+    style_points: style.points,
+    style_reasons: style.rows.map(([label, hint]) => `${label}: ${hint}`),
   };
 }
 
@@ -260,7 +279,7 @@ async function handleScore(request, env) {
       continue;
     }
     budget -= take;
-    jobs.push({ id, text, take });
+    jobs.push({ id, text, take, kind: t.kind === "comment" ? "comment" : "pr" });
   }
   if (!jobs.length) return json({ ok: false, error: "no_texts" }, 400);
 
@@ -284,8 +303,11 @@ async function handleScore(request, env) {
         language: null,
         score_per_1k: null,
         signals: [],
+        style_flag: false,
+        style_points: null,
+        style_reasons: [],
       }
-    : { id: j.id, ...scoreText(j.text, j.take) });
+    : { id: j.id, ...scoreText(j.text, j.take, j.kind) });
   return json({ ok: true, results, quota: q, dropped: texts.length - jobs.length });
 }
 

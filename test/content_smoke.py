@@ -29,9 +29,13 @@ MOCK_RESPONSE = {
          "verdict": "flags as AI at the 5% false-positive operating point", "words": 300,
          "truncated": False, "language": "en",
          "signals": ["31 buzzword hits (delve, leverage, seamless)"]},
+        # b0 carries no style_* fields at all: the chip row must survive a
+        # response from a worker build that predates the comment-style layer.
         {"id": "b1", "flagged": False, "abstained": False, "p": 0.03,
          "verdict": "no detection at the 5% false-positive operating point", "words": 120,
-         "truncated": False, "language": "en", "signals": []},
+         "truncated": False, "language": "en", "signals": [],
+         "style_flag": True, "style_points": 8.5,
+         "style_reasons": ["no #issue, @name or link: real comments point at something"]},
         {"id": "b2", "flagged": False, "abstained": True, "p": None,
          "verdict": "not scored: under 20 words", "words": 5,
          "truncated": False, "language": "en", "signals": []},
@@ -86,6 +90,7 @@ FIXTURE = f"""<!doctype html>
       out.id = "test-output";
       out.textContent = JSON.stringify({{
         sentTexts: window.__sent ? window.__sent.texts.map(t => t.text) : null,
+        sentKinds: window.__sent ? window.__sent.texts.map(t => t.kind) : null,
         fabText: fab ? fab.textContent : null,
       }});
       document.body.appendChild(out);
@@ -151,9 +156,26 @@ def main():
         ("fab summary counts flags and misses", "1 of 2 flagged, 1 over the scan limit" in dom),
     ]
 
+    checks += [
+        ("style chip on the style-only comment",
+         "tellcheck-style" in dom and "reads assistant-drafted (style)" in dom),
+        # Class-attr match, so the embedded CSS/JS source cannot satisfy it:
+        # only b0 flags, so a second flag chip would mean the style layer
+        # leaked into the detector's chip.
+        ("style flag never borrows the detector's flag chip",
+         dom.count('tellcheck-chip tellcheck-flag"') == 1),
+        ("style reasons render in the panel",
+         "real comments point at something" in dom),
+        ("style panel says it is a separate signal", "Separate signal" in dom),
+    ]
+
     m = re.search(r'<div id="test-output">([^<]+)</div>', dom)
-    sent = json.loads(m.group(1))["sentTexts"] if m else None
+    out = json.loads(m.group(1)) if m else {}
+    sent = out.get("sentTexts")
+    kinds = out.get("sentKinds")
     checks.append(("scan sent 5 texts", bool(sent) and len(sent) == 5))
+    checks.append(("description sent as kind pr, thread comments as kind comment",
+                   kinds == ["pr", "comment", "comment", "comment", "comment"]))
     checks.append(("title prepended to first block",
                    bool(sent) and sent[0].startswith("Add comprehensive error handling")))
     # The live h1 carries a screen-reader "- #15000" sibling; scoring the issue

@@ -19,9 +19,16 @@ jobs:
 
       - name: Syntax-check the worker and extension sources
         run: |
-          for f in worker/src/index.js extension/*.js extension/*/*.js; do
+          for f in worker/src/index.js worker/src/comment-tells.js extension/*.js extension/*/*.js; do
             [ -f "$f" ] && node --check "$f"
           done
+
+      # The comment-style layer ships with its synthetic Python-parity
+      # fixtures: constructed texts pinning the tricky cases (unicode word
+      # boundaries, round-half-even labels, band edges). The larger
+      # corpus-derived set stays out of the repo and runs locally instead.
+      - name: Comment-style layer parity
+        run: node --test test/comment-tells.test.mjs
 
       # The worker suite imports the detector, which is private and not in this
       # repo (see "What is not in this repository"), so it cannot run here. The

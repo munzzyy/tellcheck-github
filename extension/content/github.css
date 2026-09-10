@@ -6,6 +6,7 @@
   --tc-flag-bg: #fff1e5; --tc-flag-bd: #d1242f; --tc-flag-fg: #a40e26;
   --tc-clean-bg: #dafbe1; --tc-clean-bd: #1a7f37; --tc-clean-fg: #116329;
   --tc-abstain-bg: #eaeef2; --tc-abstain-bd: #6e7781; --tc-abstain-fg: #57606a;
+  --tc-style-bg: #fff8c5; --tc-style-bd: #9a6700; --tc-style-fg: #7d4e00;
   --tc-panel-bg: #f6f8fa; --tc-panel-bd: #d0d7de; --tc-panel-fg: #1f2328;
   --tc-focus: #0969da;
   --tc-hover: 0.96;
@@ -20,6 +21,7 @@
   --tc-flag-bg: #3c1618; --tc-flag-bd: #f85149; --tc-flag-fg: #ffa198;
   --tc-clean-bg: #12261e; --tc-clean-bd: #2ea043; --tc-clean-fg: #7ee787;
   --tc-abstain-bg: #21262d; --tc-abstain-bd: #484f58; --tc-abstain-fg: #8b949e;
+  --tc-style-bg: #272115; --tc-style-bd: #9e6a03; --tc-style-fg: #d29922;
   --tc-panel-bg: #161b22; --tc-panel-bd: #30363d; --tc-panel-fg: #e6edf3;
   --tc-focus: #58a6ff;
   --tc-hover: 1.25;
@@ -29,6 +31,7 @@
     --tc-flag-bg: #3c1618; --tc-flag-bd: #f85149; --tc-flag-fg: #ffa198;
     --tc-clean-bg: #12261e; --tc-clean-bd: #2ea043; --tc-clean-fg: #7ee787;
     --tc-abstain-bg: #21262d; --tc-abstain-bd: #484f58; --tc-abstain-fg: #8b949e;
+    --tc-style-bg: #272115; --tc-style-bd: #9e6a03; --tc-style-fg: #d29922;
     --tc-panel-bg: #161b22; --tc-panel-bd: #30363d; --tc-panel-fg: #e6edf3;
     --tc-focus: #58a6ff;
     --tc-hover: 1.25;
@@ -89,6 +92,7 @@
 .tellcheck-flag { background: var(--tc-flag-bg); border-color: var(--tc-flag-bd); color: var(--tc-flag-fg); }
 .tellcheck-clean { background: var(--tc-clean-bg); border-color: var(--tc-clean-bd); color: var(--tc-clean-fg); }
 .tellcheck-abstain { background: var(--tc-abstain-bg); border-color: var(--tc-abstain-bd); color: var(--tc-abstain-fg); }
+.tellcheck-style { background: var(--tc-style-bg); border-color: var(--tc-style-bd); color: var(--tc-style-fg); margin-left: 6px; }
 
 .tellcheck-panel {
   margin: 4px 0 10px;
@@ -102,6 +106,7 @@
 }
 .tellcheck-panel-verdict { font-weight: 700; margin-bottom: 2px; }
 .tellcheck-panel-meta { opacity: 0.75; margin-bottom: 6px; }
+.tellcheck-panel-style { font-weight: 600; margin: 8px 0 4px; color: var(--tc-style-fg); }
 .tellcheck-signals { margin: 0 0 8px; padding-left: 18px; }
 .tellcheck-signals li { margin: 2px 0; }
 .tellcheck-panel-foot { opacity: 0.75; font-style: italic; }

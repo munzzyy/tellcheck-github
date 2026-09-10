@@ -74,6 +74,7 @@ extension/          the MV3 extension, Firefox first
   popup/ options/   quota, CSV export, settings
 worker/             the scoring API on Cloudflare Workers
   src/index.js      POST /score, metered per install and per IP in a Durable Object
+  src/comment-tells.js  the comment-style layer, a separate genre signal with parity fixtures
 site/               the landing page, measurement page and privacy policy
 test/               worker suite and a headless DOM smoke test
 ```
@@ -82,8 +83,11 @@ test/               worker suite and a headless DOM smoke test
 
 ```
 python3 tools/sync_detector.py        # pull the private detector into the worker
-node --test test/worker.test.mjs      # 23 tests, no network
-python3 test/content_smoke.py         # 16 checks, drives the real content script in headless chromium
+node --test test/worker.test.mjs      # 30 tests, no network
+node --test test/comment-tells.test.mjs  # comment-style layer vs the Python original; the synthetic
+                                         # fixtures always run, the full corpus set runs when found
+                                         # locally (see test/comment-fixtures.mjs)
+python3 test/content_smoke.py         # 21 checks, drives the real content script in headless chromium
 bash tools/package.sh                 # lint and build dist/
 ```
 

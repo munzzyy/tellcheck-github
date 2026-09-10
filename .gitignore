@@ -2,6 +2,11 @@
 worker/src/detector-core.js
 dist/
 
+# Only the synthetic parity fixtures ship here. The full corpus-derived set
+# lives outside this repo; the tests find it locally (see test/comment-fixtures.mjs)
+# and it must never be committed, even if a copy lands in the tree.
+test/fixtures/comment_tells_fixtures.json
+
 # Launch and marketing working files are kept out of the public repo.
 launch/
 node_modules/

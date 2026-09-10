@@ -1,0 +1,286 @@
+[
+ {
+  "hits": [
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing"
+  ],
+  "id": "empty",
+  "kind": "comment",
+  "points": 2.5,
+  "text": ""
+ },
+ {
+  "hits": [
+   "143 commas/1k"
+  ],
+  "id": "short-lgtm",
+  "kind": "comment",
+  "points": 1.5,
+  "text": "LGTM, thanks! One nit: rename this in #123?"
+ },
+ {
+  "hits": [
+   "59 commas/1k",
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing",
+   "opens by confirming what they already said"
+  ],
+  "id": "echo-open",
+  "kind": "comment",
+  "points": 5.5,
+  "text": "Confirmed, both /docs/ and /docs/archive/ return 404 now. The redirect from the old blog index also works."
+ },
+ {
+  "hits": [
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing",
+   "opens by confirming what they already said"
+  ],
+  "id": "echo-open-leading-space",
+  "kind": "comment",
+  "points": 4.0,
+  "text": "   Confirmed: works on my machine after the rebase."
+ },
+ {
+  "hits": [
+   "111 commas/1k",
+   "no thanks/please/sorry",
+   "asks nothing",
+   "opens by confirming what they already said"
+  ],
+  "id": "echo-open-after-code-fence",
+  "kind": "comment",
+  "points": 4.5,
+  "text": "```\n$ curl -I https://example.org/howto/\nHTTP/2 404\n```\nConfirmed, the page is gone on my end too."
+ },
+ {
+  "hits": [
+   "91 contractions/1k",
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing",
+   "opens by confirming what they already said"
+  ],
+  "id": "echo-noted",
+  "kind": "comment",
+  "points": 5.5,
+  "text": "Noted: I'll drop the second patch and rebase on main tonight."
+ },
+ {
+  "hits": [
+   "59 commas/1k",
+   "asks nothing",
+   "tallies your own contribution"
+  ],
+  "id": "self-tally",
+  "kind": "comment",
+  "points": 3.5,
+  "text": "That clears all three dead links I found. The remaining page renders fine for me, thanks @reviewer."
+ },
+ {
+  "hits": [
+   "71 commas/1k",
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing",
+   "tallies your own contribution"
+  ],
+  "id": "self-tally-my",
+  "kind": "comment",
+  "points": 5.5,
+  "text": "With this merged my parser fixes are all in, so the tracker can close."
+ },
+ {
+  "hits": [
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing",
+   "3 em dashes"
+  ],
+  "id": "emdash-heavy",
+  "kind": "comment",
+  "points": 5.5,
+  "text": "The cache \u2014 both tiers \u2014 invalidates on write \u2014 which is why the test flaked."
+ },
+ {
+  "hits": [
+   "65 commas/1k",
+   "194 contractions/1k",
+   "no thanks/please/sorry",
+   "asks nothing"
+  ],
+  "id": "contraction-rich-human",
+  "kind": "comment",
+  "points": 4.5,
+  "text": "It's flaky because we're racing the watcher. I've seen it on my box too, and it doesn't happen if you don't touch the cache dir. Wouldn't block on it, honestly. See #88."
+ },
+ {
+  "hits": [
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing"
+  ],
+  "id": "zero-social-zero-refs",
+  "kind": "comment",
+  "points": 2.5,
+  "text": "The handler rebinds the socket on every retry. The kernel keeps the old descriptor in TIME_WAIT. The listener therefore fails on the second attempt. The fix binds once and reuses the descriptor, and the retry loop only reconnects."
+ },
+ {
+  "hits": [
+   "83 commas/1k",
+   "no thanks/please/sorry",
+   "asks nothing"
+  ],
+  "id": "unicode-social-prefix",
+  "kind": "comment",
+  "points": 3.0,
+  "text": "The string 'tr\u00e8splease' in the locale file broke the parser, see #42."
+ },
+ {
+  "hits": [
+   "91 commas/1k",
+   "no thanks/please/sorry",
+   "asks nothing"
+  ],
+  "id": "unicode-social-suffix",
+  "kind": "comment",
+  "points": 3.0,
+  "text": "We got a 'sorry\u00e9' artifact from the localization pass, see #77."
+ },
+ {
+  "hits": [
+   "77 commas/1k",
+   "154 contractions/1k",
+   "asks nothing"
+  ],
+  "id": "unicode-contraction",
+  "kind": "comment",
+  "points": 3.5,
+  "text": "I r\u00e9sum\u00e9'd the thread after the caf\u00e9's downtime, thanks @luc."
+ },
+ {
+  "hits": [
+   "71 commas/1k",
+   "asks nothing",
+   "tallies your own contribution"
+  ],
+  "id": "unicode-tally",
+  "kind": "comment",
+  "points": 3.5,
+  "text": "That covers all thr\u00e9e broken links I found in the docs, thanks @maintainer."
+ },
+ {
+  "hits": [
+   "no thanks/please/sorry",
+   "asks nothing",
+   "1 em dash"
+  ],
+  "id": "unicode-refs",
+  "kind": "comment",
+  "points": 3.0,
+  "text": "cc @se\u00f1or_dev and see https://example.com/p\u00e1gina \u2014 merci."
+ },
+ {
+  "hits": [
+   "83 commas/1k"
+  ],
+  "id": "code-stripped-punctuation",
+  "kind": "comment",
+  "points": 1.5,
+  "text": "Is the regex `a,b,c,d,e,f \u2014 g?` still right? Output below:\n```\nfoo \u2014 bar,,,,, baz?\n```\nWorks for me, thanks. See #12."
+ },
+ {
+  "hits": [
+   "182 commas/1k",
+   "asks nothing"
+  ],
+  "id": "question-only-in-code",
+  "kind": "comment",
+  "points": 2.0,
+  "text": "The failing call is `retry(when=None)?` according to the trace, thanks @dev, see #9."
+ },
+ {
+  "hits": [
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing"
+  ],
+  "id": "wc-80-boundary",
+  "kind": "comment",
+  "points": 2.5,
+  "text": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+ },
+ {
+  "hits": [
+   "81 words",
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing"
+  ],
+  "id": "wc-81-boundary",
+  "kind": "comment",
+  "points": 3.5,
+  "text": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+ },
+ {
+  "hits": [
+   "120 words",
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing"
+  ],
+  "id": "wc-120-boundary",
+  "kind": "comment",
+  "points": 3.5,
+  "text": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+ },
+ {
+  "hits": [
+   "121 words",
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing"
+  ],
+  "id": "wc-121-boundary",
+  "kind": "comment",
+  "points": 4.5,
+  "text": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word "
+ },
+ {
+  "hits": [
+   "no thanks/please/sorry"
+  ],
+  "id": "pr-long-assertive",
+  "kind": "pr",
+  "points": 1.0,
+  "text": "This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. Fixes #431."
+ },
+ {
+  "hits": [
+   "121 words",
+   "no thanks/please/sorry",
+   "asks nothing"
+  ],
+  "id": "comment-same-text-as-pr",
+  "kind": "comment",
+  "points": 3.5,
+  "text": "This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. This change moves session teardown out of the request path. Fixes #431."
+ },
+ {
+  "hits": [
+   "128 words",
+   "78 commas/1k",
+   "no thanks/please/sorry",
+   "no #issue, @name or link",
+   "asks nothing",
+   "opens by confirming what they already said"
+  ],
+  "id": "comment-drafted-over-threshold",
+  "kind": "comment",
+  "points": 7.5,
+  "text": "Confirmed, the new retry path behaves the way the description says it should. The connection pool now hands back the same socket on the second attempt, the timeout window resets cleanly, and the failure counter no longer double increments when the watcher fires during a retry. I also went through the shutdown path, the metrics hook, and the config reload branch, and each of them picks up the new descriptor handling without further changes. The remaining work is cosmetic. The log line still prints the old field name, the comment above the pool struct describes the previous behavior, and the sample config carries a stale default. None of that blocks the change. It reads correct, it measures correct under the stress harness, and it holds up across restarts."
+ }
+]

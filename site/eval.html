@@ -75,6 +75,31 @@
   abstained and shows you why. A one-line "lgtm" gets no verdict, because no honest detector
   can give one.</p>
 
+  <h2>The comment-style layer</h2>
+  <p>Short comments needed their own layer. On real GitHub review comments the statistical
+  detector above is no better than chance (AUC 0.4925 on a corpus of real public review comments
+  and assistant-drafted comments from one drafting pipeline), so the extension carries a second, separate
+  signal that scores the genre itself: comment length, comma density, contractions, whether the
+  text points at an issue, a person, or a link, and a few pattern tells like opening by
+  confirming what the other person just said. It catches comment-style tells of assistant-drafted
+  text. It is never merged into the probability above; it renders as its own chip, and a text can
+  carry both signals, either, or neither.</p>
+  <p>Its held-out numbers, from repo-grouped 5-fold cross-validation, flagging above 7 points:
+  it catches 25.0% of assistant-drafted comments (n=128) at a 0.92% false-positive rate on 5,316
+  real GitHub comments, with 0 of 84 flags on a hand-checked real-world human set. Run as a union
+  with the main detector, the catch rate is 25.8% at 5.76% on GitHub comments; all eight human
+  false positives in that union come from the main detector, none from the style layer. A
+  label-shuffle null test lands at the base flag rate, so the harness is not grading its own
+  answer key.</p>
+  <p>Its limits, plainly. The catch rate is measured against drafts from one assistant drafting
+  pipeline, so 25% is not a general AI-detection rate and is not presented as one. The layer is
+  also easy to evade: drafts filtered against this layer before posting evade it. On a fresh
+  holdout of exactly such drafts, gathered after the corpus freeze, the catch rate fell to 1 in 21.
+  Anyone who tunes drafts against the score walks past it, which is why the chip says the text
+  reads assistant-drafted rather than claiming who wrote it. The fresh human sample is only 10
+  comments, too few to stand up a false-positive claim on its own, and its single flag reads
+  assistant-drafted on inspection anyway. A style flag is a reason to look, nothing more.</p>
+
   <h2>What it gets wrong</h2>
   <p>Two failure modes, named rather than buried. First: text a person drafted and then had
   a model polish for tone or grammar. The words on the page really were shaped by the model
