@@ -113,9 +113,10 @@ export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT) {
       : "not scored: under 20 words";
   } else if (flagged) {
     verdict = "flags as AI at the 5% false-positive operating point" +
-      (r.words < 60 ? " (short text, lower confidence)" : "");
+      (r.words < 60 ? " (measured on longer text; short comments run less certain)" : "");
   } else {
-    verdict = "no detection at the 5% false-positive operating point";
+    verdict = "no detection at the 5% false-positive operating point" +
+      (r.words < 60 ? " (short text, lower confidence)" : "");
   }
   return {
     p: p === undefined ? null : p,
@@ -243,26 +244,48 @@ async function handleScore(request, env) {
 
   // Request-level word budget: each admitted text is clipped to its `take`
   // so the total scored words can never exceed the budget (the CPU cap).
+  // A text the leftover budget cannot cover to at least 20 words (or in full,
+  // if shorter) is refused outright: scoring a tiny prefix of a long comment
+  // would report "under 20 words" about a text that is not short.
   let budget = MAX_WORDS_PER_REQUEST;
   const jobs = [];
   for (const t of texts) {
-    if (budget <= 0) break;
     const text = typeof t.text === "string" ? t.text : "";
     if (!text.trim()) continue;
+    const id = String(t.id ?? jobs.length);
     const words = text.split(/\s+/).length;
     const take = Math.min(words, budget, MAX_WORDS_PER_TEXT);
+    if (take < Math.min(words, 20)) {
+      jobs.push({ id, outOfBudget: true });
+      continue;
+    }
     budget -= take;
-    jobs.push({ id: String(t.id ?? jobs.length), text, take });
+    jobs.push({ id, text, take });
   }
   if (!jobs.length) return json({ ok: false, error: "no_texts" }, 400);
 
+  const scoring = jobs.filter((j) => !j.outOfBudget);
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
-  const q = await meter(env, install, ip, jobs.length);
+  const q = await meter(env, install, ip, scoring.length);
   if (!q.allowed) {
     return json({ ok: false, error: "quota", quota: q }, 429);
   }
 
-  const results = jobs.map((j) => ({ id: j.id, ...scoreText(j.text, j.take) }));
+  const results = jobs.map((j) => j.outOfBudget
+    ? {
+        id: j.id,
+        p: null,
+        verdict: "not scored: the scan's word budget ran out before this text",
+        flagged: false,
+        abstained: true,
+        reason: "budget",
+        words: 0,
+        truncated: false,
+        language: null,
+        score_per_1k: null,
+        signals: [],
+      }
+    : { id: j.id, ...scoreText(j.text, j.take) });
   return json({ ok: true, results, quota: q, dropped: texts.length - jobs.length });
 }
 

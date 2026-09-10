@@ -4,6 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import worker, { scoreText, MeterDO } from "../worker/src/index.js";
+import Noslop from "../worker/src/detector-core.js";
 
 function mockKV(store = new Map()) {
   return {
@@ -183,6 +184,68 @@ test("request word budget is actually enforced across texts", async () => {
   const total = d.results.reduce((n, x) => n + x.words, 0);
   assert.ok(total <= 2000, `scored ${total} words, budget is 2000`);
   assert.equal(d.results[1].truncated, true, "second text must be clipped");
+});
+
+test("a drained budget refuses tail texts instead of calling them short", async () => {
+  // Three texts eat 1500+469+31 of the 2000-word budget (the third is a
+  // 52-word comment clipped to the last 31). The fourth is another 52-word
+  // comment with zero budget left: it must come back with the budget reason,
+  // never scored on a tiny prefix and never labeled "under 20 words".
+  const env = { QUOTA: mockKV() };
+  const r = await worker.fetch(req({
+    install: "budget-tail",
+    texts: [
+      { id: "a", text: (HUMAN_TEXT + " ").repeat(29) },
+      { id: "b", text: (HUMAN_TEXT + " ").repeat(9) },
+      { id: "c", text: HUMAN_TEXT },
+      { id: "d", text: HUMAN_TEXT },
+      { id: "e", text: "lgtm, merging" },
+    ],
+  }), env);
+  const d = await r.json();
+  assert.equal(d.ok, true);
+  const byId = new Map(d.results.map((x) => [x.id, x]));
+  assert.equal(byId.get("a").abstained, false, "first text should score in full");
+  assert.equal(byId.get("b").abstained, false, "second text should score in full");
+  assert.equal(byId.get("c").abstained, false, "31 words of budget still cover a scorable prefix");
+  assert.equal(byId.get("c").truncated, true);
+  for (const id of ["d", "e"]) {
+    const x = byId.get(id);
+    assert.equal(x.abstained, true, `${id} has no budget left`);
+    assert.equal(x.flagged, false);
+    assert.equal(x.reason, "budget", `${id} should carry the budget reason`);
+    assert.match(x.verdict, /budget/);
+    assert.ok(!/under 20 words/.test(x.verdict),
+      `${id} must not be called too short: ${x.verdict}`);
+  }
+  const total = d.results.reduce((n, x) => n + x.words, 0);
+  assert.ok(total <= 2000, `scored ${total} words, budget is 2000`);
+  assert.equal(d.quota.used, 3, "refused texts must not spend quota");
+});
+
+test("short texts carry the lower-confidence qualifier both ways", () => {
+  const shortClean = scoreText(HUMAN_TEXT, 30);
+  assert.equal(shortClean.flagged, false);
+  assert.equal(shortClean.abstained, false);
+  assert.match(shortClean.verdict, /lower confidence/);
+  const shortFlag = scoreText(AI_TEXT, 40);
+  assert.equal(shortFlag.flagged, true);
+  assert.match(shortFlag.verdict, /measured on longer text/);
+  assert.match(shortFlag.verdict, /less certain/);
+  // Full-length verdicts stay unqualified.
+  assert.ok(!/less certain|lower confidence/.test(scoreText(AI_TEXT).verdict));
+  assert.ok(!/less certain|lower confidence/.test(scoreText((HUMAN_TEXT + " ").repeat(2)).verdict));
+});
+
+test("flagged is pinned to the engine's exact verdict wording", () => {
+  // scoreText derives `flagged` from detect_verdict.startsWith("flags as AI").
+  // If the engine ever rewords its verdict, every text would silently read
+  // clean; this fails loud instead.
+  const r = Noslop.analyze(AI_TEXT, { markdown: true });
+  assert.equal(typeof r.detect_verdict, "string", "engine must return a string verdict");
+  assert.ok(r.detect_verdict.startsWith("flags as AI"),
+    `engine verdict prefix changed, flagged wire-up is broken: "${r.detect_verdict}"`);
+  assert.equal(scoreText(AI_TEXT).flagged, true);
 });
 
 test("no internal CLI advice leaks into verdicts", () => {

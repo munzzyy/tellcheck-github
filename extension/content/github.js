@@ -143,7 +143,7 @@
     const panel = el("div", `${NS}-panel`);
     panel.appendChild(el("div", `${NS}-panel-verdict`, result.verdict));
     const meta = `${result.words} words scored` +
-      (result.truncated ? " (long text, first 1500 words)" : "") +
+      (result.truncated ? ` (long text, first ${result.words} words)` : "") +
       (result.language && result.language !== "en" ? ` | language: ${result.language}` : "");
     panel.appendChild(el("div", `${NS}-panel-meta`, meta));
     if (result.signals && result.signals.length) {
@@ -152,7 +152,8 @@
       panel.appendChild(ul);
     }
     panel.appendChild(el("div", `${NS}-panel-foot`,
-      "A statistical signal at a 5% false-positive operating point, not proof. " +
+      "A statistical signal, not proof. The 5% false-positive point is measured " +
+      "on longer text; short comments run less certain. " +
       "Judge the contribution, not the author."));
     return panel;
   }
@@ -204,8 +205,9 @@
       let flagged = 0, scored = 0, missed = 0;
       for (const t of texts) {
         const r = byId.get(t.id);
-        if (!r) {
-          // Over the per-request cap: say so instead of silently skipping.
+        // Missing from the response (over the per-text cap) or refused by the
+        // worker's word budget: same chip, say so instead of silently skipping.
+        if (!r || r.reason === "budget") {
           t.el.insertAdjacentElement("beforebegin", notScoredChip());
           missed++;
           continue;
@@ -242,11 +244,12 @@
       }
       let flagged = 0, missed = 0;
       for (const row of resp.rows) {
+        // A budget-refused result renders like a missing one: not scored.
+        const r = row.result && row.result.reason !== "budget" ? row.result : null;
         const link = document.querySelector(`a[href$='/pull/${row.number}']`);
-        if (!link) { if (!row.result) missed++; continue; }
+        if (!link) { if (!r) missed++; continue; }
         const old = link.parentElement.querySelector(`.${NS}-mini`);
         if (old) old.remove();
-        const r = row.result;
         const mini = r
           ? el("span",
               `${NS}-mini ${NS}-${r.abstained ? "abstain" : r.flagged ? "flag" : "clean"}`,

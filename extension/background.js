@@ -51,7 +51,7 @@ async function scoreTexts(texts) {
 
 // Batch: list open PRs of a repo (their bodies come back in the same call)
 // and score title+body per PR. One GitHub request, one scoring request.
-// Covers the 20 most recently updated open PRs.
+// Covers the 25 most recently updated open PRs.
 async function batchScan(owner, repo) {
   const settings = await getSettings();
   const headers = { accept: "application/vnd.github+json" };
@@ -60,7 +60,7 @@ async function batchScan(owner, repo) {
   let gh;
   try {
     gh = await fetch(
-      `https://api.github.com/repos/${safe(owner)}/${safe(repo)}/pulls?state=open&per_page=20`,
+      `https://api.github.com/repos/${safe(owner)}/${safe(repo)}/pulls?state=open&per_page=25`,
       { headers },
     );
   } catch {
