@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/munzzyy/tellcheck-github/actions/workflows/ci.yml/badge.svg)](https://github.com/munzzyy/tellcheck-github/actions/workflows/ci.yml)
 [![Mozilla Add-on](https://img.shields.io/amo/v/tellcheck-for-github)](https://addons.mozilla.org/en-US/firefox/addon/tellcheck-for-github/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
 > **Install:** [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/tellcheck-for-github/).
 > Free, no account, 100 scored comments a day.
@@ -119,4 +119,6 @@ accusation costs a contributor far more than a missed bot costs a maintainer.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+[GPL-3.0-or-later](LICENSE). You can use, study, change and share it. If you distribute a copy
+or a modified version, it has to stay under the GPL and come with its source. Earlier commits
+were under MIT.
