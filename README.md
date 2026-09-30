@@ -50,7 +50,7 @@ changes: judge the contribution, not the author.
 The threshold targets a 5% false-positive rate across a broad mix of English. Under roughly
 twenty words, or on text it reads as anything other than English, it does not guess at all.
 It says it abstained and tells you why. A one-line "lgtm" gets no verdict, because no
-honest detector can give one. The [measurement page](https://tellcheck-github.pages.dev/eval)
+honest detector can give one. The [measurement page](https://tellcheck.munzzyy.dev/eval)
 carries the corpus, the calibration and the named failure modes.
 
 ## What leaves your browser
@@ -62,7 +62,7 @@ not logged in full, and not tied to your GitHub account.
 
 The extension asks for one permission, `storage`, and runs on `github.com` only. If you add
 a GitHub token to raise the batch-scan rate limit, it stays on your device and is sent only
-to `api.github.com`. The [privacy policy](https://tellcheck-github.pages.dev/privacy) is the
+to `api.github.com`. The [privacy policy](https://tellcheck.munzzyy.dev/privacy) is the
 long version, and the code that backs it is in this repo.
 
 ## Layout
