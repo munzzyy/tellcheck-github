@@ -9,6 +9,7 @@
 (function () {
   const api = globalThis.browser ?? globalThis.chrome;
   const NS = "tellcheck";
+  const REPORT_URL = "https://github.com/munzzyy/tellcheck-github/issues/new?template=wrong-flag.md";
 
   // ---------- routing ----------
 
@@ -193,10 +194,19 @@
       for (const s of result.style_reasons || []) ul.appendChild(el("li", null, s));
       panel.appendChild(ul);
     }
-    panel.appendChild(el("div", `${NS}-panel-foot`,
+    const foot = el("div", `${NS}-panel-foot`,
       "A statistical signal, not proof. The 5% false-positive point is measured " +
       "on longer text; short comments run less certain. " +
-      "Judge the contribution, not the author."));
+      "Judge the contribution, not the author.");
+    if (result.flagged || result.style_flag) {
+      // No page context in the URL: the reporter chooses what to share.
+      const report = el("a", `${NS}-report`, "Wrong flag? Report it");
+      report.href = REPORT_URL;
+      report.target = "_blank";
+      report.rel = "noopener noreferrer";
+      foot.append(" ", report);
+    }
+    panel.appendChild(foot);
     return panel;
   }
 

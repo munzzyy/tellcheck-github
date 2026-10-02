@@ -260,6 +260,16 @@ def main():
         ("style panel says it is a separate signal", "Separate signal" in dom),
     ]
 
+    report = re.findall(r'<a [^>]*class="tellcheck-report"[^>]*>', dom)
+    checks += [
+        # b0 flags and b1 style-flags; the clean and abstained panels get no link.
+        ("flagged panels link to the wrong-flag report", len(report) == 2),
+        ("report link is exactly the bare template URL, opened safely",
+         len(report) == 2 and all(
+             'href="https://github.com/munzzyy/tellcheck-github/issues/new?template=wrong-flag.md"' in a
+             and 'target="_blank"' in a and 'rel="noopener noreferrer"' in a for a in report)),
+    ]
+
     sent = out.get("sentTexts")
     kinds = out.get("sentKinds")
     checks.append(("scan sent 5 texts", bool(sent) and len(sent) == 5))
