@@ -4,7 +4,7 @@ Versions are the extension versions uploaded to addons.mozilla.org. The
 scoring worker deploys on its own schedule. Worker changes are listed under
 the version they shipped next to and marked "(worker)".
 
-## Unreleased
+## 0.2.0 (2026-10-02)
 
 - Every comment on a long thread gets a badge. Scoring calls are split to fit
   the per-request limits of the worker. Comments past the 25th and the PRs in

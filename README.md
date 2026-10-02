@@ -129,10 +129,10 @@ accusation costs a contributor far more than a missed bot costs a maintainer.
 What is left needs someone outside this repo's code: a release, a store
 account or a decision.
 
-- A new version on addons.mozilla.org. Everything under Unreleased in the
-  [CHANGELOG](CHANGELOG.md) reaches users only once it ships, and the
-  changes marked (worker) need the scoring worker redeployed as well. The
-  next version goes up under GPL-3.0-or-later. No release is tagged here yet.
+- 0.2.0 on addons.mozilla.org. It is tagged here, but the changes in the
+  [CHANGELOG](CHANGELOG.md) reach users only once AMO has it, and the
+  changes marked (worker) need the scoring worker redeployed as well. It
+  goes up under GPL-3.0-or-later.
 - A call on the detector badge for thread comments. The
   [measurement page](https://tellcheck.munzzyy.dev/eval) puts the statistical
   detector at chance on real review comments, yet every comment of 20 words

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tellcheck for GitHub",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Flags likely AI-generated pull requests and issues on GitHub. A signal for maintainers, not a verdict.",
   "browser_specific_settings": {
     "gecko": {
