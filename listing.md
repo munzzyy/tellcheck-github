@@ -59,3 +59,5 @@ analytics; no payment code. The data_collection_permissions key declares
 websiteContent (the scanned text) and, as optional, technicalAndInteraction (a random
 meter id sent with scans for the daily free-scan counter; it rotates every UTC day, so
 nothing is trackable across days).
+
+Thanks for reviewing it.
