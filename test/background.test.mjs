@@ -28,7 +28,7 @@ function reply(status, body, headers = {}) {
   };
 }
 
-function harness({ used = 0, prs = [], github = null } = {}) {
+function harness({ used = 0, prs = [], github = null, refuse = null } = {}) {
   const store = {};
   const scoreCalls = [];
   const githubCalls = [];
@@ -38,6 +38,8 @@ function harness({ used = 0, prs = [], github = null } = {}) {
 
   function score(body) {
     scoreCalls.push(body);
+    const refused = refuse && refuse(scoreCalls.length);
+    if (refused) return refused;
     if (body.texts.length > WORKER_MAX_TEXTS) {
       violations.push(`${body.texts.length} texts in one request`);
       return reply(400, { ok: false, error: "too_many_texts" });
@@ -237,4 +239,21 @@ test("GitHub 404 points at a token for private repos", async () => {
   assert.equal(resp.ok, false);
   assert.match(resp.detail, /private/);
   assert.match(resp.detail, /token/);
+});
+
+test("a network-cap refusal mid-scan keeps what landed and says which limit ran out", async () => {
+  const network = reply(429, {
+    ok: false,
+    error: "quota",
+    quota: { allowed: false, meter: "ok", used: 10, limit: 500, reason: "network daily cap reached" },
+  });
+  const h = harness({ refuse: (n) => (n === 2 ? network : null) });
+  const texts = Array.from({ length: 30 }, (_, i) => ({ id: `b${i}`, text: words(40), kind: "comment" }));
+  const resp = await h.send({ type: "scan", texts });
+  assert.equal(resp.ok, true);
+  assert.equal(h.scoreCalls.length, 2, "a network-cap refusal must not be retried smaller");
+  assert.equal(resp.results.filter((r) => !r.reason).length, 25);
+  const capped = resp.results.filter((r) => r.reason === "quota");
+  assert.equal(capped.length, 5);
+  for (const r of capped) assert.match(r.verdict, /network/);
 });

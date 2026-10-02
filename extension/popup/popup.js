@@ -16,6 +16,16 @@ async function refreshQuota() {
     bar.parentElement.hidden = true;
     return;
   }
+  // A network-cap refusal pairs this install's count with the network's limit.
+  if (lastQuota.reason === "network daily cap reached") {
+    line.textContent = "This network's shared daily allowance is used up. " +
+      "Offices, campuses and VPNs share one. It resets at midnight UTC.";
+    bar.parentElement.hidden = true;
+    const scan = document.getElementById("scan");
+    scan.disabled = true;
+    scan.textContent = "Network limit reached";
+    return;
+  }
   if (typeof lastQuota.used === "number") {
     line.textContent = `${lastQuota.used} of ${lastQuota.limit} scans used today.`;
     bar.style.width = `${Math.min(100, (lastQuota.used / lastQuota.limit) * 100)}%`;

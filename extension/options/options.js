@@ -15,8 +15,10 @@ document.getElementById("save").onclick = async () => {
     apiUrl: document.getElementById("apiUrl").value.trim(),
   });
   const s = document.getElementById("saved");
+  // A status region speaks when its text changes, so set the text after it is visible.
   s.style.visibility = "visible";
-  setTimeout(() => { s.style.visibility = "hidden"; }, 1500);
+  s.textContent = "Saved.";
+  setTimeout(() => { s.textContent = ""; s.style.visibility = "hidden"; }, 1500);
 };
 
 load();

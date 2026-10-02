@@ -56,11 +56,12 @@ function chunk(texts) {
 
 function notScored(id, stop) {
   const quota = stop.error === "quota";
+  const network = quota && stop.quota && stop.quota.reason === "network daily cap reached";
   return {
     id: String(id),
     p: null,
-    verdict: quota
-      ? "not scored: the daily scan limit ran out before this text"
+    verdict: network ? "not scored: this network's shared daily limit ran out before this text"
+      : quota ? "not scored: the daily scan limit ran out before this text"
       : "not scored: the scoring server did not answer",
     flagged: false,
     abstained: true,

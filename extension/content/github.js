@@ -243,6 +243,12 @@
 
   // ---------- scan flows ----------
 
+  function quotaRefusal(resp) {
+    return resp.quota && resp.quota.reason === "network daily cap reached"
+      ? "This network's shared daily limit is used up"
+      : "Daily scan limit reached";
+  }
+
   let busy = false;
 
   async function scanDetail() {
@@ -260,7 +266,7 @@
       }).catch(() => null);
       if (!resp || !resp.ok) {
         b.textContent = resp && resp.error === "quota"
-          ? "Daily scan limit reached"
+          ? quotaRefusal(resp)
           : "Scan failed (API unreachable?)";
         return;
       }
@@ -341,7 +347,7 @@
       if (!resp || !resp.ok) {
         b.textContent =
           resp && (resp.error === "github" || resp.error === "network") ? (resp.detail || "Network failed") :
-          resp && resp.error === "quota" ? "Daily scan limit reached" :
+          resp && resp.error === "quota" ? quotaRefusal(resp) :
           resp && resp.error === "no_open_prs" ? "No open PRs" :
           resp && resp.error === "not_found" ? "None of these are in the 100 newest open PRs" :
           "Batch scan failed";

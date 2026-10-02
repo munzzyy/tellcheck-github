@@ -42,3 +42,8 @@ jobs:
         env:
           CHROMIUM: google-chrome
         run: python3 test/content_smoke.py
+
+      - name: Popup smoke test
+        env:
+          CHROMIUM: google-chrome
+        run: python3 test/popup_smoke.py

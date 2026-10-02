@@ -177,6 +177,10 @@ PAGES = {
     "/someowner/somerepo/pull/1": page(DETAIL_BODY, f"() => ({json.dumps(MOCK_RESPONSE)})"),
     "/someowner/somerepo/pull/2": page(LONG_THREAD, f"({ANSWER_ALL})(0)"),
     "/someowner/somerepo/pull/3": page(LONG_THREAD, f"({ANSWER_ALL})(4)"),
+    "/someowner/somerepo/pull/4": page(LONG_THREAD, "() => (" + json.dumps({
+        "ok": False, "error": "quota",
+        "quota": {"allowed": False, "meter": "ok", "used": 0, "limit": 500, "reason": "network daily cap reached"},
+    }) + ")"),
     "/someowner/somerepo/pulls": page(LIST_BODY, f"() => ({json.dumps(LIST_MOCK)})"),
 }
 
@@ -226,6 +230,7 @@ def main():
     _, long_thread = dump(port, "/someowner/somerepo/pull/2")
     _, capped = dump(port, "/someowner/somerepo/pull/3")
     _, listing = dump(port, "/someowner/somerepo/pulls")
+    _, network = dump(port, "/someowner/somerepo/pull/4")
     httpd.shutdown()
 
     checks = [
@@ -317,6 +322,9 @@ def main():
     checks.append(("a style-only row is not marked ok",
                    mini(3).get("label") not in (None, "ok") and "tellcheck-style" in mini(3).get("cls", "")))
     checks.append(("a daily-limit row reads not scored", mini(5).get("label") == "not scored"))
+
+    checks.append(("a network-cap refusal says the shared network limit, not the daily limit",
+                   network.get("fabText") == "This network's shared daily limit is used up"))
 
     ok = True
     for name, passed in checks:
