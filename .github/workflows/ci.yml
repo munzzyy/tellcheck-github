@@ -34,10 +34,10 @@ jobs:
       - name: Background script
         run: node --test test/background.test.mjs
 
-      # The worker suite imports the detector, which is private and not in this
-      # repo (see "What is not in this repository"), so it cannot run here. The
-      # DOM smoke test can: it drives the real content script against a
-      # GitHub-shaped page with a mocked scoring response.
+      # The detector is private, so the meter and request-cap tests run against a stub.
+      - name: Worker meter and request caps
+        run: node --import ./test/stub-detector.mjs --test test/worker-meter.test.mjs
+
       - name: Content script smoke test
         env:
           CHROMIUM: google-chrome

@@ -83,7 +83,10 @@ test/               worker suite and a headless DOM smoke test
 
 ```
 python3 tools/sync_detector.py        # pull the private detector into the worker
-node --test test/worker.test.mjs      # 30 tests, no network
+node --test test/worker.test.mjs      # 13 tests that need the detector, no network
+node --import ./test/stub-detector.mjs --test test/worker-meter.test.mjs
+                                      # 17 meter and request-cap tests; without the
+                                      # detector they run against test/detector-stub.mjs
 node --test test/comment-tells.test.mjs  # comment-style layer vs the Python original; the synthetic
                                          # fixtures always run, the full corpus set runs when found
                                          # locally (see test/comment-fixtures.mjs)
@@ -109,7 +112,8 @@ Then put the live URL in `extension/config.js` if it differs from the default.
 ## What is not in this repository
 
 The detector. `worker/src/detector-core.js` is synced in at build time from a private
-engine and is gitignored, so the worker suite does not run in CI here either. Everything
+engine and is gitignored, so the scoring tests do not run in CI here either. The meter and
+request-cap tests do, against a stub that stands in for the detector. Everything
 about how that engine is called, metered, rate limited and rendered is in this repo, which
 is the point of the privacy policy telling you to read the code. The claims about what the
 server does with your text are checkable. The model is not open.
