@@ -12,7 +12,9 @@ mockup. Nothing here ships; it only produces marketing images.
 import http.server
 import json
 import pathlib
+import shutil
 import subprocess
+import tempfile
 import threading
 
 from PIL import Image, ImageChops
@@ -194,13 +196,17 @@ def shoot(html, out, path="/quietriver/config/pull/4823", w=980, h=760, wait=250
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
     port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    subprocess.run(
-        ["chromium", "--headless=new", "--disable-gpu", "--no-sandbox", "--hide-scrollbars",
-         "--force-device-scale-factor=2", f"--window-size={w},{h}",
-         "--user-data-dir=/tmp/claude-1000/ss-shot-profile",
-         f"--virtual-time-budget={wait}", f"--screenshot={out}",
-         f"http://127.0.0.1:{port}{path}"],
-        capture_output=True, timeout=60)
+    profile = tempfile.mkdtemp(prefix="tellcheck-shot-")
+    try:
+        subprocess.run(
+            ["chromium", "--headless=new", "--disable-gpu", "--no-sandbox", "--hide-scrollbars",
+             "--force-device-scale-factor=2", f"--window-size={w},{h}",
+             f"--user-data-dir={profile}",
+             f"--virtual-time-budget={wait}", f"--screenshot={out}",
+             f"http://127.0.0.1:{port}{path}"],
+            capture_output=True, timeout=60)
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
     srv.shutdown()
     used_box = autocrop(out, box=crop_box)
     with Image.open(out) as img:
@@ -211,7 +217,6 @@ def shoot(html, out, path="/quietriver/config/pull/4823", w=980, h=760, wait=250
 
 def make_gif():
     """plain -> badges -> panel open, held, looping. Scaled down for the web."""
-    import shutil
     frames = [("detail-plain.png", 12), ("detail-badges.png", 12), ("detail-light.png", 34)]
     concat = OUT / "_frames.txt"
     lines = []

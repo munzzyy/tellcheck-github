@@ -17,6 +17,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -212,12 +213,15 @@ def browser():
 
 
 def dump(port, path):
-    dom = subprocess.run(
-        [browser(), "--headless=new", "--disable-gpu", "--no-sandbox",
-         f"--user-data-dir=/tmp/claude-1000/tellcheck-github-smoke-profile",
-         "--virtual-time-budget=4000", "--dump-dom", f"http://127.0.0.1:{port}{path}"],
-        capture_output=True, text=True, timeout=60,
-    ).stdout
+    profile = tempfile.mkdtemp(prefix="tellcheck-smoke-")
+    try:
+        dom = subprocess.run(
+            [browser(), "--headless=new", "--disable-gpu", "--no-sandbox", f"--user-data-dir={profile}",
+             "--virtual-time-budget=4000", "--dump-dom", f"http://127.0.0.1:{port}{path}"],
+            capture_output=True, text=True, timeout=60,
+        ).stdout
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
     m = re.search(r'<div id="test-output">([^<]+)</div>', dom)
     return dom, (json.loads(html.unescape(m.group(1))) if m else {})
 
