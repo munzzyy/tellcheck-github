@@ -38,6 +38,15 @@ jobs:
       - name: Worker meter and request caps
         run: node --import ./test/stub-detector.mjs --test test/worker-meter.test.mjs
 
+      - name: CHANGELOG has a heading for the manifest version
+        run: |
+          python3 - <<'PY'
+          import json, re, sys
+          v = json.load(open("extension/manifest.json"))["version"]
+          if not re.search(rf"^## {re.escape(v)} ", open("CHANGELOG.md").read(), re.M):
+              sys.exit(f"CHANGELOG.md has no '## {v} ' heading")
+          PY
+
       - name: Content script smoke test
         env:
           CHROMIUM: google-chrome
