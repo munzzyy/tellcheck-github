@@ -82,7 +82,7 @@
       // Everything after it is a thread comment.
       if (text) items.push({ id: `b${i}`, text, el, kind: i === 0 ? "pr" : "comment" });
     });
-    return items.slice(0, 25); // worker caps at 25 texts per request
+    return items;
   }
 
   // ---------- UI ----------
@@ -145,10 +145,30 @@
     return chip;
   }
 
-  function notScoredChip() {
-    const chip = el("span", `${NS}-chip ${NS}-abstain`, "Tellcheck: not scored (scan limit)");
-    chip.title = "This block was over the per-scan limit. Scan again to cover the rest.";
+  const NOT_SCORED = {
+    budget: ["scan limit", "Refused as over the scoring server's per-request limit."],
+    quota: ["daily limit", "The daily scan limit ran out before this one."],
+    error: ["server error", "The scoring server did not answer."],
+  };
+
+  function notScoredReason(r) {
+    if (!r) return "budget";
+    return Object.hasOwn(NOT_SCORED, r.reason) ? r.reason : null;
+  }
+
+  function notScoredChip(reason) {
+    const [label, title] = NOT_SCORED[reason];
+    const chip = el("span", `${NS}-chip ${NS}-abstain`, `Tellcheck: not scored (${label})`);
+    chip.title = title;
     return chip;
+  }
+
+  function missTail(miss) {
+    return [
+      miss.budget && `${miss.budget} over the scan limit`,
+      miss.quota && `${miss.quota} past the daily limit`,
+      miss.error && `${miss.error} not answered`,
+    ].filter(Boolean).map((s) => `, ${s}`).join("");
   }
 
   function panelFor(result) {
@@ -235,21 +255,22 @@
         return;
       }
       const byId = new Map(resp.results.map((r) => [r.id, r]));
-      let flagged = 0, scored = 0, missed = 0;
+      let flagged = 0, scored = 0;
+      const miss = { budget: 0, quota: 0, error: 0 };
       for (const t of texts) {
         const r = byId.get(t.id);
-        // Missing from the response (over the per-text cap) or refused by the
-        // worker's word budget: same chip, say so instead of silently skipping.
-        if (!r || r.reason === "budget") {
-          t.el.insertAdjacentElement("beforebegin", notScoredChip());
-          missed++;
+        // Missing from the response or refused: say so instead of silently skipping.
+        const why = notScoredReason(r);
+        if (why) {
+          t.el.insertAdjacentElement("beforebegin", notScoredChip(why));
+          miss[why]++;
           continue;
         }
         attachBadge(t, r);
         if (!r.abstained) scored++;
         if (r.flagged) flagged++;
       }
-      const tail = missed ? `, ${missed} over the scan limit` : "";
+      const tail = missTail(miss);
       b.textContent = flagged
         ? `${flagged} of ${scored} flagged${tail}. Rescan`
         : `No flags in ${scored} scored${tail}. Rescan`;
@@ -277,8 +298,8 @@
       }
       let flagged = 0, missed = 0;
       for (const row of resp.rows) {
-        // A budget-refused result renders like a missing one: not scored.
-        const r = row.result && row.result.reason !== "budget" ? row.result : null;
+        const why = notScoredReason(row.result);
+        const r = why ? null : row.result;
         const link = document.querySelector(`a[href$='/pull/${row.number}']`);
         if (!link) { if (!r) missed++; continue; }
         const old = link.parentElement.querySelector(`.${NS}-mini`);
@@ -288,12 +309,12 @@
               `${NS}-mini ${NS}-${r.abstained ? "abstain" : r.flagged ? "flag" : "clean"}`,
               r.abstained ? "n/a" : r.flagged ? `AI? p ${r.p}` : "ok")
           : el("span", `${NS}-mini ${NS}-abstain`, "not scored");
-        mini.title = r ? r.verdict : "over the per-scan limit; scan again to cover the rest";
+        mini.title = r ? r.verdict : NOT_SCORED[why][1];
         link.insertAdjacentElement("afterend", mini);
         if (r && r.flagged) flagged++;
         if (!r) missed++;
       }
-      const tail = missed ? ` (${missed} over the scan limit)` : "";
+      const tail = missed ? ` (${missed} not scored)` : "";
       b.textContent = `${flagged} flagged of ${resp.rows.length}${tail}. Rescan`;
     } catch {
       b.textContent = "Batch scan failed";

@@ -87,7 +87,8 @@ node --test test/worker.test.mjs      # 30 tests, no network
 node --test test/comment-tells.test.mjs  # comment-style layer vs the Python original; the synthetic
                                          # fixtures always run, the full corpus set runs when found
                                          # locally (see test/comment-fixtures.mjs)
-python3 test/content_smoke.py         # 21 checks, drives the real content script in headless chromium
+node --test test/background.test.mjs  # request splitting and quota handling, stub worker
+python3 test/content_smoke.py         # drives the real content script in headless chromium
 bash tools/package.sh                 # lint and build dist/
 ```
 

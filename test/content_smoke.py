@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Headless smoke test for the content script against a GitHub-shaped DOM.
 
-Serves a fixture page at a /owner/repo/pull/1 path, injects a browser-API shim
+Serves fixture pages at /owner/repo/pull/N paths, injects a browser-API shim
 plus the REAL content/github.js, auto-clicks the scan button with a mocked
 background response, and asserts the badges actually render. Catches the class
 of bug where unit logic passes but the wiring never executes.
 
   python3 test/content_smoke.py
 """
+import html
 import http.server
 import json
 import os
@@ -48,10 +49,62 @@ MOCK_RESPONSE = {
     "dropped": 1,
 }
 
-FIXTURE = f"""<!doctype html>
-<html><head><meta charset="utf-8"><style>{CONTENT_CSS}</style></head>
-<body>
-<h1 data-component="PH_Title" class="prc-PageHeader-Title-p0Mgh"><span class="f1 text-normal markdown-title">Add comprehensive error handling</span><span class="sr-only"> - #<!-- -->42</span></h1>
+SHIM = """
+<script>
+  window.__sent = null;
+  window.browser = {
+    runtime: {
+      sendMessage: async (msg) => {
+        if (msg.type === "settings") return { autoScan: false };
+        if (msg.type === "scan" || msg.type === "batch") { window.__sent = msg; return MOCK(msg); }
+        return null;
+      },
+      onMessage: { addListener: () => {} },
+    },
+  };
+</script>"""
+
+PROBE = """
+<script>
+  setTimeout(() => {
+    const fab = document.getElementById("tellcheck-fab");
+    if (fab) fab.click();
+    setTimeout(() => {
+      const out = document.createElement("div");
+      out.id = "test-output";
+      const blocks = [...document.querySelectorAll(".timeline-comment")];
+      out.textContent = JSON.stringify({
+        sent: window.__sent,
+        sentTexts: window.__sent && window.__sent.texts ? window.__sent.texts.map(t => t.text) : null,
+        sentKinds: window.__sent && window.__sent.texts ? window.__sent.texts.map(t => t.kind) : null,
+        fabText: fab ? fab.textContent : null,
+        blocks: blocks.length,
+        chips: blocks.map(b => { const c = b.querySelector(".tellcheck-chip"); return c ? c.textContent : null; }),
+      });
+      document.body.appendChild(out);
+    }, 300);
+  }, 100);
+</script>"""
+
+
+def page(body, mock_js):
+    """A GitHub-shaped page: fixture markup, the browser shim answering with
+    mock_js(msg), the real content script, then a probe that clicks scan and
+    writes what happened into #test-output."""
+    return (f'<!doctype html>\n<html><head><meta charset="utf-8"><style>{CONTENT_CSS}</style></head>\n'
+            f"<body>\n{body}\n<script>const MOCK = {mock_js};</script>{SHIM}\n"
+            f"<script>{CONTENT_JS}</script>{PROBE}\n</body></html>")
+
+
+def comments(texts):
+    return "\n".join(f'<div class="timeline-comment"><div class="comment-body"><p>{t}</p></div></div>'
+                     for t in texts)
+
+
+TITLE = ('<h1 data-component="PH_Title" class="prc-PageHeader-Title-p0Mgh"><span class="f1 text-normal '
+         'markdown-title">Add comprehensive error handling</span><span class="sr-only"> - #<!-- -->42</span></h1>')
+
+DETAIL_BODY = TITLE + """
 <div class="timeline-comment"><div class="comment-body">
   <p>This comprehensive PR delves into robust error handling.</p>
   <pre>this code block must never reach the scanner</pre>
@@ -65,44 +118,38 @@ FIXTURE = f"""<!doctype html>
 </div></div>
 <div class="timeline-comment"><div class="comment-body">
   <p>this fifth comment is over the mocked per-scan limit and gets no result</p>
-</div></div>
+</div></div>"""
 
-<script>
-  window.__sent = null;
-  window.browser = {{
-    runtime: {{
-      sendMessage: async (msg) => {{
-        if (msg.type === "settings") return {{ autoScan: false }};
-        if (msg.type === "scan") {{ window.__sent = msg; return {json.dumps(MOCK_RESPONSE)}; }}
-        return null;
-      }},
-      onMessage: {{ addListener: () => {{}} }},
-    }},
-  }};
-</script>
-<script>{CONTENT_JS}</script>
-<script>
-  setTimeout(() => {{
-    const fab = document.getElementById("tellcheck-fab");
-    if (fab) fab.click();
-    setTimeout(() => {{
-      const out = document.createElement("div");
-      out.id = "test-output";
-      out.textContent = JSON.stringify({{
-        sentTexts: window.__sent ? window.__sent.texts.map(t => t.text) : null,
-        sentKinds: window.__sent ? window.__sent.texts.map(t => t.kind) : null,
-        fabText: fab ? fab.textContent : null,
-      }});
-      document.body.appendChild(out);
-    }}, 300);
-  }}, 100);
-</script>
-</body></html>"""
+# Answers every id it is sent with a clean result, except the last `capped`
+# ids, which come back refused at the daily limit.
+ANSWER_ALL = """(capped) => (msg) => ({
+  ok: true,
+  results: msg.texts.map((t, i) => i >= msg.texts.length - capped
+    ? { id: t.id, p: null, flagged: false, abstained: true, reason: "quota",
+        verdict: "not scored: the daily scan limit ran out before this text", words: 0 }
+    : { id: t.id, p: 0.03, flagged: false, abstained: false,
+        verdict: "no detection at the 5% false-positive operating point", words: 40,
+        truncated: false, language: "en", signals: [] }),
+  quota: { used: msg.texts.length - capped, limit: 100, meter: "ok" },
+})"""
+
+LONG_THREAD = TITLE + "\n" + comments(
+    [f"comment number {i} on this long thread, with enough words in it to be worth scoring"
+     for i in range(31)])
+
+PAGES = {
+    "/someowner/somerepo/pull/1": page(DETAIL_BODY, f"() => ({json.dumps(MOCK_RESPONSE)})"),
+    "/someowner/somerepo/pull/2": page(LONG_THREAD, f"({ANSWER_ALL})(0)"),
+    "/someowner/somerepo/pull/3": page(LONG_THREAD, f"({ANSWER_ALL})(4)"),
+}
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        body = FIXTURE.encode()
+        if self.path not in PAGES:
+            self.send_error(404)
+            return
+        body = PAGES[self.path].encode()
         self.send_response(200)
         self.send_header("content-type", "text/html; charset=utf-8")
         self.send_header("content-length", str(len(body)))
@@ -123,18 +170,24 @@ def browser():
     sys.exit(f"no chromium binary found (tried: {', '.join(n for n in names if n)})")
 
 
+def dump(port, path):
+    dom = subprocess.run(
+        [browser(), "--headless=new", "--disable-gpu", "--no-sandbox",
+         f"--user-data-dir=/tmp/claude-1000/tellcheck-github-smoke-profile",
+         "--virtual-time-budget=4000", "--dump-dom", f"http://127.0.0.1:{port}{path}"],
+        capture_output=True, text=True, timeout=60,
+    ).stdout
+    m = re.search(r'<div id="test-output">([^<]+)</div>', dom)
+    return dom, (json.loads(html.unescape(m.group(1))) if m else {})
+
+
 def main():
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
-
-    url = f"http://127.0.0.1:{port}/someowner/somerepo/pull/1"
-    dom = subprocess.run(
-        [browser(), "--headless=new", "--disable-gpu", "--no-sandbox",
-         f"--user-data-dir=/tmp/claude-1000/tellcheck-github-smoke-profile",
-         "--virtual-time-budget=4000", "--dump-dom", url],
-        capture_output=True, text=True, timeout=60,
-    ).stdout
+    dom, out = dump(port, "/someowner/somerepo/pull/1")
+    _, long_thread = dump(port, "/someowner/somerepo/pull/2")
+    _, capped = dump(port, "/someowner/somerepo/pull/3")
     httpd.shutdown()
 
     checks = [
@@ -169,8 +222,6 @@ def main():
         ("style panel says it is a separate signal", "Separate signal" in dom),
     ]
 
-    m = re.search(r'<div id="test-output">([^<]+)</div>', dom)
-    out = json.loads(m.group(1)) if m else {}
     sent = out.get("sentTexts")
     kinds = out.get("sentKinds")
     checks.append(("scan sent 5 texts", bool(sent) and len(sent) == 5))
@@ -184,6 +235,19 @@ def main():
                    bool(sent) and "#42" not in sent[0]))
     checks.append(("code blocks stripped from sent text",
                    bool(sent) and all("must never reach" not in t for t in sent)))
+
+    # Past the worker's 25 texts per request: the content script sends every
+    # block and the background splits the call, so every block gets a chip.
+    chips = long_thread.get("chips") or []
+    checks.append(("long thread sends every block", len(long_thread.get("sentTexts") or []) == 31))
+    checks.append(("long thread has 31 blocks and 31 chips",
+                   long_thread.get("blocks") == 31 and len(chips) == 31 and all(chips)))
+    checks.append(("long thread fab counts all 31", long_thread.get("fabText") == "No flags in 31 scored. Rescan"))
+    capped_chips = capped.get("chips") or []
+    marked = [i for i, c in enumerate(capped_chips) if c == "Tellcheck: not scored (daily limit)"]
+    checks.append(("daily-limit refusals get their own chip, on exactly those blocks", marked == [27, 28, 29, 30]))
+    checks.append(("fab says how many ran past the daily limit",
+                   capped.get("fabText") == "No flags in 27 scored, 4 past the daily limit. Rescan"))
 
     ok = True
     for name, passed in checks:

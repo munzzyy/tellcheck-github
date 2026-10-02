@@ -30,6 +30,10 @@ jobs:
       - name: Comment-style layer parity
         run: node --test test/comment-tells.test.mjs
 
+      # Real background.js against a stub worker that enforces the caps and the meter.
+      - name: Background script
+        run: node --test test/background.test.mjs
+
       # The worker suite imports the detector, which is private and not in this
       # repo (see "What is not in this repository"), so it cannot run here. The
       # DOM smoke test can: it drives the real content script against a

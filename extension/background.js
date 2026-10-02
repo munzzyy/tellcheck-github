@@ -30,11 +30,63 @@ async function getSettings() {
   };
 }
 
-async function scoreTexts(texts) {
-  const [install, settings] = await Promise.all([getMeterId(), getSettings()]);
+// The worker's per-request caps; past them it refuses texts unscored.
+const MAX_TEXTS = 25;
+const MAX_WORDS_PER_TEXT = 1500;
+const MAX_WORDS_PER_REQUEST = 2000;
+
+// Same word count the worker budgets with, in request order.
+function chunk(texts) {
+  const out = [];
+  let cur = [];
+  let words = 0;
+  for (const t of texts) {
+    const w = Math.min(String(t.text || "").split(/\s+/).length, MAX_WORDS_PER_TEXT);
+    if (cur.length && (cur.length === MAX_TEXTS || words + w > MAX_WORDS_PER_REQUEST)) {
+      out.push(cur);
+      cur = [];
+      words = 0;
+    }
+    cur.push(t);
+    words += w;
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+function notScored(id, stop) {
+  const quota = stop.error === "quota";
+  return {
+    id: String(id),
+    p: null,
+    verdict: quota
+      ? "not scored: the daily scan limit ran out before this text"
+      : "not scored: the scoring server did not answer",
+    flagged: false,
+    abstained: true,
+    reason: quota ? "quota" : "error",
+    words: 0,
+    truncated: false,
+    language: null,
+    signals: [],
+    style_flag: false,
+    style_points: null,
+    style_reasons: [],
+  };
+}
+
+// A network-cap refusal pairs the install's count with the network's limit.
+function roomLeft(refusal) {
+  const q = refusal.quota;
+  if (refusal.error !== "quota" || !q || q.reason !== "daily limit reached") return 0;
+  if (typeof q.used !== "number" || typeof q.limit !== "number") return 0;
+  return Math.max(0, q.limit - q.used);
+}
+
+async function postScore(apiUrl, install, texts) {
   let resp;
   try {
-    resp = await fetch(`${settings.apiUrl}/score`, {
+    resp = await fetch(`${apiUrl}/score`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ install, texts }),
@@ -49,8 +101,39 @@ async function scoreTexts(texts) {
   return data;
 }
 
+async function scoreTexts(texts) {
+  const [install, settings] = await Promise.all([getMeterId(), getSettings()]);
+  const results = [];
+  let quota = null;
+  let dropped = 0;
+  let answered = false;
+  let stop = null;
+  for (const part of chunk(texts)) {
+    let send = stop ? [] : part;
+    const sent = new Set();
+    while (send.length) {
+      const data = await postScore(settings.apiUrl, install, send);
+      if (data.ok) {
+        results.push(...data.results);
+        for (const t of send) sent.add(String(t.id));
+        quota = data.quota;
+        dropped += data.dropped || 0;
+        answered = true;
+        break;
+      }
+      stop = data;
+      // A refusal at the install cap is all-or-nothing, so send what still fits.
+      const room = roomLeft(data);
+      send = room > 0 && room < send.length ? send.slice(0, room) : [];
+    }
+    for (const t of part) if (!sent.has(String(t.id))) results.push(notScored(t.id, stop));
+  }
+  if (!answered) return stop || { ok: false, error: "no_texts" };
+  return { ok: true, results, quota, dropped };
+}
+
 // Batch: list open PRs of a repo (their bodies come back in the same call)
-// and score title+body per PR. One GitHub request, one scoring request.
+// and score title+body per PR. One GitHub request, then scoreTexts.
 // Covers the 25 most recently updated open PRs.
 async function batchScan(owner, repo) {
   const settings = await getSettings();
