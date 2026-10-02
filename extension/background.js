@@ -132,6 +132,18 @@ async function scoreTexts(texts) {
   return { ok: true, results, quota, dropped };
 }
 
+// One left-to-right pass, so whichever of a comment or a fence opens first wins; unclosed ones run to the end.
+const NOT_PROSE = new RegExp([
+  /<!--[\s\S]*?(?:-->|(?![\s\S]))/.source,
+  /^ {0,3}(`{3,})[^`\n]*(?:\n[\s\S]*?(?:^ {0,3}\1`*[ \t]*$|(?![\s\S]))|(?![\s\S]))/.source,
+  /^ {0,3}(~{3,})[^\n]*(?:\n[\s\S]*?(?:^ {0,3}\2~*[ \t]*$|(?![\s\S]))|(?![\s\S]))/.source,
+  /(?<!`)(`+)(?!`)[^\n]*?[^`\n]\3(?!`)/.source,
+].join("|"), "gm");
+
+function proseOf(markdown) {
+  return String(markdown || "").replace(NOT_PROSE, "").trim();
+}
+
 // Batch: list open PRs of a repo (their bodies come back in the same call)
 // and score title+body per PR. One GitHub request, then scoreTexts.
 // Covers the 25 most recently updated open PRs.
@@ -158,7 +170,7 @@ async function batchScan(owner, repo) {
 
   const texts = prs.map((pr) => ({
     id: String(pr.number),
-    text: `${pr.title || ""}\n\n${pr.body || ""}`.trim(),
+    text: proseOf(`${pr.title || ""}\n\n${pr.body || ""}`),
     kind: "pr",
   })).filter((t) => t.text);
   const scored = await scoreTexts(texts);

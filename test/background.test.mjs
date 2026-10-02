@@ -158,3 +158,43 @@ test("at the daily cap the refusal comes back as before", async () => {
   assert.equal(resp.quota.reason, "daily limit reached");
   assert.equal(h.scoreCalls.length, 1);
 });
+
+test("batch strips template comments and code before anything is sent", async () => {
+  const body = [
+    "<!--",
+    "Thanks for the PR! Fill in TEMPLATE-MARKER below.",
+    "```",
+    "this fence sits inside the comment",
+    "```",
+    "-->",
+    "Fixes the crash when the config is empty.",
+    "",
+    "```js",
+    "const x = 'CODE-MARKER-1';",
+    "```",
+    "",
+    "~~~",
+    "CODE-MARKER-2 <!-- not a comment in here",
+    "~~~",
+    "",
+    "Run `CODE-MARKER-3` to check it, then the parser keeps going.",
+  ].join("\n");
+  const h = harness({
+    prs: [
+      pr(1, body),
+      pr(2, "<!-- only the TEMPLATE-MARKER template, never filled in -->", "Speed up the lexer"),
+      pr(3, "Real words here.\n<!-- unterminated TEMPLATE-MARKER comment\nrest of the template"),
+    ],
+  });
+  const resp = await h.send({ type: "batch", owner: "o", repo: "r" });
+  assert.equal(resp.ok, true);
+  const posted = JSON.stringify(h.scoreCalls);
+  for (const marker of ["TEMPLATE-MARKER", "CODE-MARKER-1", "CODE-MARKER-2", "CODE-MARKER-3"]) {
+    assert.ok(!posted.includes(marker), `${marker} reached /score`);
+  }
+  const sent = new Map(h.scoreCalls.flatMap((c) => c.texts).map((t) => [t.id, t.text]));
+  assert.ok(sent.get("1").includes("Fixes the crash when the config is empty."));
+  assert.ok(sent.get("1").includes("then the parser keeps going."));
+  assert.equal(sent.get("2"), "Speed up the lexer");
+  assert.equal(sent.get("3"), "PR 3\n\nReal words here.");
+});
