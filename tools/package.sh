@@ -5,7 +5,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION=$(python3 -c "import json;print(json.load(open('extension/manifest.json'))['version'])")
+# A regex, not a JSON parse, so a broken manifest still clears its old zip before the lint fails.
+VERSION=$(python3 - <<'PY'
+import re
+m = re.search(r'"version"\s*:\s*"([^"]+)"', open("extension/manifest.json").read())
+print(m.group(1) if m else "")
+PY
+)
+if [ -z "$VERSION" ]; then
+  echo "no version in extension/manifest.json; not building" >&2
+  exit 1
+fi
 OUT="dist/tellcheck-github-${VERSION}.zip"
 mkdir -p dist
 rm -f "$OUT"
