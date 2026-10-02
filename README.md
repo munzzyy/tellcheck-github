@@ -124,6 +124,25 @@ server does with your text are checkable. The model is not open.
 Every score says signal, not proof. Do not weaken that framing anywhere in the UI. A false
 accusation costs a contributor far more than a missed bot costs a maintainer.
 
+## Roadmap
+
+What is left needs someone outside this repo's code: a release, a store
+account or a decision.
+
+- A new version on addons.mozilla.org. Everything under Unreleased in the
+  [CHANGELOG](CHANGELOG.md) reaches users only once it ships, and the
+  changes marked (worker) need the scoring worker redeployed as well. The
+  next version goes up under GPL-3.0-or-later. No release is tagged here yet.
+- A call on the detector badge for thread comments. The
+  [measurement page](https://tellcheck.munzzyy.dev/eval) puts the statistical
+  detector at chance on real review comments, yet every comment of 20 words
+  or more still gets a "flags as AI" or "no AI detection" badge. Should it
+  hide on comments, change its label or wait for longer text? That is open.
+- A watch on the live scoring worker. The extension does nothing without it,
+  and nothing checks it today, so an outage shows up as failed scans.
+- Chrome and Edge. The extension is Firefox only. A Chromium build needs its
+  own manifest and a Chrome Web Store listing.
+
 ## License
 
 [GPL-3.0-or-later](LICENSE). You can use, study, change and share it. If you distribute a copy
