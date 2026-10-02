@@ -253,7 +253,8 @@ test("a network-cap refusal mid-scan keeps what landed and says which limit ran 
   assert.equal(resp.ok, true);
   assert.equal(h.scoreCalls.length, 2, "a network-cap refusal must not be retried smaller");
   assert.equal(resp.results.filter((r) => !r.reason).length, 25);
-  const capped = resp.results.filter((r) => r.reason === "quota");
+  const capped = resp.results.filter((r) => r.reason === "network");
   assert.equal(capped.length, 5);
+  assert.deepEqual(capped.map((r) => r.id), ["b25", "b26", "b27", "b28", "b29"]);
   for (const r of capped) assert.match(r.verdict, /network/);
 });

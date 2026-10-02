@@ -150,6 +150,7 @@
   const NOT_SCORED = {
     budget: ["scan limit", "Refused as over the scoring server's per-request limit."],
     quota: ["daily limit", "The daily scan limit ran out before this one."],
+    network: ["network limit", "This network's shared daily limit ran out before this one."],
     error: ["server error", "The scoring server did not answer."],
     prose: ["no prose", "Only code, quotes or images, no written text to score."],
   };
@@ -170,6 +171,7 @@
     return [
       miss.budget && `${miss.budget} over the scan limit`,
       miss.quota && `${miss.quota} past the daily limit`,
+      miss.network && `${miss.network} past this network's shared limit`,
       miss.error && `${miss.error} not answered`,
     ].filter(Boolean).map((s) => `, ${s}`).join("");
   }
@@ -279,7 +281,7 @@
       }
       const byId = new Map(resp.results.map((r) => [r.id, r]));
       let flagged = 0, scored = 0;
-      const miss = { budget: 0, quota: 0, error: 0 };
+      const miss = { budget: 0, quota: 0, network: 0, error: 0 };
       for (const t of blocks) {
         if (!t.text) {
           t.el.insertAdjacentElement("beforebegin", notScoredChip("prose"));

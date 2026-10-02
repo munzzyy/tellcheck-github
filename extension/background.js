@@ -65,7 +65,7 @@ function notScored(id, stop) {
       : "not scored: the scoring server did not answer",
     flagged: false,
     abstained: true,
-    reason: quota ? "quota" : "error",
+    reason: network ? "network" : quota ? "quota" : "error",
     words: 0,
     truncated: false,
     language: null,

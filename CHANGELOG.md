@@ -25,7 +25,8 @@ the version they shipped next to and marked "(worker)".
 - Flagged breakdowns link to a [wrong flag](.github/ISSUE_TEMPLATE/wrong-flag.md)
   issue template. The link carries nothing about the page.
 - When the shared cap for a whole network is what stopped a scan, the popup and
-  the page say so. The popup used to show your own count against the network
+  the page say so. If it runs out partway through, the rest reads "not scored
+  (network limit)". The popup used to show your own count against the network
   limit.
 - The reasons under a style badge describe the comment for the maintainer
   reading it. They used to give editing advice meant for the person drafting

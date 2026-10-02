@@ -128,12 +128,14 @@ DETAIL_BODY = TITLE + """
 </div></div>"""
 
 # Answers every id it is sent with a clean result, except the last `capped`
-# ids, which come back refused at the daily limit.
-ANSWER_ALL = """(capped) => (msg) => ({
+# ids, which come back refused at the install's daily limit or the network's.
+ANSWER_ALL = """(capped, reason = "quota") => (msg) => ({
   ok: true,
   results: msg.texts.map((t, i) => i >= msg.texts.length - capped
-    ? { id: t.id, p: null, flagged: false, abstained: true, reason: "quota",
-        verdict: "not scored: the daily scan limit ran out before this text", words: 0 }
+    ? { id: t.id, p: null, flagged: false, abstained: true, reason,
+        verdict: reason === "network"
+          ? "not scored: this network's shared daily limit ran out before this text"
+          : "not scored: the daily scan limit ran out before this text", words: 0 }
     : { id: t.id, p: 0.03, flagged: false, abstained: false,
         verdict: "no detection at the 5% false-positive operating point", words: 40,
         truncated: false, language: "en", signals: [] }),
@@ -162,7 +164,9 @@ LIST_MOCK = {
         list_row(4, "not scored: under 20 words", p=None, flagged=False, abstained=True),
         list_row(5, "not scored: the daily scan limit ran out before this text",
                  p=None, flagged=False, abstained=True, reason="quota"),
-    ] + [list_row(n, CLEAN, p=0.05, flagged=False, abstained=False) for n in range(6, 24)]
+        list_row(6, "not scored: this network's shared daily limit ran out before this text",
+                 p=None, flagged=False, abstained=True, reason="network"),
+    ] + [list_row(n, CLEAN, p=0.05, flagged=False, abstained=False) for n in range(7, 24)]
       + [list_row(n, FLAGS, p=0.99, flagged=True, abstained=False) for n in (24, 25)],
     "notFound": [],
     "quota": {"used": 22, "limit": 100, "meter": "ok"},
@@ -196,6 +200,7 @@ PAGES = {
         "quota": {"allowed": False, "meter": "ok", "used": 0, "limit": 500, "reason": "network daily cap reached"},
     }) + ")"),
     "/someowner/somerepo/pull/5": page(QUOTES_BODY, f"({ANSWER_ALL})(0)"),
+    "/someowner/somerepo/pull/6": page(LONG_THREAD, f"({ANSWER_ALL})(6, 'network')"),
     "/someowner/somerepo/pulls": page(LIST_BODY, f"() => ({json.dumps(LIST_MOCK)})"),
 }
 
@@ -250,6 +255,7 @@ def main():
     _, listing = dump(port, "/someowner/somerepo/pulls")
     _, network = dump(port, "/someowner/somerepo/pull/4")
     _, quotes = dump(port, "/someowner/somerepo/pull/5")
+    network_dom, network_tail = dump(port, "/someowner/somerepo/pull/6")
     httpd.shutdown()
 
     checks = [
@@ -331,19 +337,35 @@ def main():
     checks.append(("one mini per listed PR, none for another repo's link",
                    len(listing.get("minis") or []) == 23 and "/otherowner/otherrepo/pull/99" not in minis))
     checks.append(("list fab counts only the rows on the page",
-                   listing.get("fabText") == "2 flagged of 23 (1 not scored). Rescan"))
+                   listing.get("fabText") == "2 flagged of 23 (2 not scored). Rescan"))
     checks.append(("list p reads two decimals like the detail chips",
                    mini(1).get("label") == "AI? p 1.00" and mini(2).get("label") == "AI? p 0.92"))
     checks.append(("every mini carries its verdict as text, not only a tooltip",
                    len(minis) == 23 and all(
-                       verdicts[n] in mini(n).get("text", "") if n != 5 else "daily scan limit" in mini(n).get("text", "")
+                       "daily scan limit" in mini(n).get("text", "") if n == 5 else
+                       "network's shared daily limit" in mini(n).get("text", "") if n == 6 else
+                       verdicts[n] in mini(n).get("text", "")
                        for n in range(1, 24))))
     checks.append(("a style-only row is not marked ok",
                    mini(3).get("label") not in (None, "ok") and "tellcheck-style" in mini(3).get("cls", "")))
     checks.append(("a daily-limit row reads not scored", mini(5).get("label") == "not scored"))
+    checks.append(("a network-limit row names the network, not the daily limit",
+                   mini(6).get("label") == "not scored" and "network" in mini(6).get("text", "")
+                   and "daily scan limit" not in mini(6).get("text", "")))
 
     checks.append(("a network-cap refusal says the shared network limit, not the daily limit",
                    network.get("fabText") == "This network's shared daily limit is used up"))
+    # The network cap can also land partway through a split scan, after earlier requests scored.
+    tail_chips = network_tail.get("chips") or []
+    checks.append(("network-limit refusals mid-scan get their own chip, on exactly those blocks",
+                   [i for i, c in enumerate(tail_chips) if c == "Tellcheck: not scored (network limit)"]
+                   == [25, 26, 27, 28, 29, 30]))
+    checks.append(("no block cut off by the network cap reads daily limit",
+                   len(tail_chips) == 31 and not any("daily limit" in (c or "") for c in tail_chips)))
+    checks.append(("network-limit chips explain the shared limit on hover",
+                   network_dom.count('title="This network\'s shared daily limit ran out before this one."') == 6))
+    checks.append(("fab says how many ran past the network's shared limit",
+                   network_tail.get("fabText") == "No flags in 25 scored, 6 past this network's shared limit. Rescan"))
 
     # Quoted text is someone else's words; a block with nothing of its own still gets a chip.
     quoted_sent = quotes.get("sentTexts") or []
