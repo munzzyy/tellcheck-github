@@ -139,7 +139,8 @@ account or a decision.
   or more still gets a "flags as AI" or "no AI detection" badge. Should it
   hide on comments, change its label or wait for longer text? That is open.
 - A watch on the live scoring worker. The extension does nothing without it,
-  and nothing checks it today, so an outage shows up as failed scans.
+  and nothing checks it today, so an outage shows up as failed scans. Someone
+  has to pick where the check runs and where its alerts go.
 - Chrome and Edge. The extension is Firefox only. A Chromium build needs its
   own manifest and a Chrome Web Store listing.
 

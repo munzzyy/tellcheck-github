@@ -16,10 +16,11 @@ the version they shipped next to and marked "(worker)".
   with only code or images reads "not scored (no prose)".
 - The batch scan strips PR-template HTML comments and code from PR bodies
   before sending them. The privacy policy always said it did.
-- The batch scan scores the PRs on the page you are looking at, so filtered
-  and sorted lists and later pages work. List badges show two decimals. A
-  style-only hit gets its own badge. Every badge carries its verdict as text
-  for screen readers.
+- The batch scan scores the PRs on the page you are looking at, as long as
+  they are among the 100 newest open PRs. Rows outside those, such as closed
+  PRs or the later pages of a busy repo, are left unscored and the scan button
+  says how many. List badges show two decimals. A style-only hit gets its own
+  badge. Every badge carries its verdict as text for screen readers.
 - Batch scan errors from GitHub name the cause: the rate limit, a private repo
   or the token.
 - Flagged breakdowns link to a [wrong flag](.github/ISSUE_TEMPLATE/wrong-flag.md)
