@@ -1,21 +1,24 @@
 #!/bin/bash
 # Package the extension for AMO submission: dist/tellcheck-github-<version>.zip
-# Runs web-ext lint first when available (npx --no-install web-ext).
+# Lints first with web-ext (npm install for the dev dependency) and builds
+# nothing when the lint fails or web-ext is missing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION=$(python3 -c "import json;print(json.load(open('extension/manifest.json'))['version'])")
-mkdir -p dist
-
-if npx --no-install web-ext --version >/dev/null 2>&1; then
-  echo "== web-ext lint =="
-  npx --no-install web-ext lint --source-dir extension || true
-else
-  echo "(web-ext not installed, skipping lint)"
-fi
-
 OUT="dist/tellcheck-github-${VERSION}.zip"
+mkdir -p dist
 rm -f "$OUT"
+
+if ! npx --no-install web-ext --version >/dev/null 2>&1; then
+  echo "web-ext is not installed (run npm install); not building $OUT" >&2
+  exit 1
+fi
+echo "== web-ext lint =="
+if ! npx --no-install web-ext lint --source-dir extension; then
+  echo "web-ext lint failed; not building $OUT" >&2
+  exit 1
+fi
 python3 - "$OUT" <<'PY'
 import pathlib, sys, zipfile
 out = pathlib.Path(sys.argv[1])

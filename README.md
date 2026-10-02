@@ -90,7 +90,7 @@ node --test test/comment-tells.test.mjs  # comment-style layer vs the Python ori
 node --test test/background.test.mjs  # request splitting and quota handling, stub worker
 python3 test/content_smoke.py         # drives the real content script in headless chromium
 python3 test/popup_smoke.py           # the popup's quota line for each stored quota state
-bash tools/package.sh                 # lint and build dist/
+bash tools/package.sh                 # lint, then build dist/ only if the lint passes
 ```
 
 To try a build: Firefox, `about:debugging`, This Firefox, Load Temporary Add-on, pick
