@@ -46,7 +46,7 @@ Web Development (primary), Privacy & Security
 Lead with detail-light.png; it shows the whole value in one frame.
 
 ## Privacy policy URL
-(the site's /privacy.html once deployed)
+https://tellcheck.munzzyy.dev/privacy
 
 ## Support email
 Munzzyy1@proton.me

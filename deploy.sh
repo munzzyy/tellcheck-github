@@ -56,5 +56,5 @@ echo "== 5/5 deploy site =="
 "${W[@]}" pages deploy site --project-name="$PAGES" --branch=main
 
 echo
-echo "DONE. Worker: ${URL:-<above>}   Site: https://$PAGES.pages.dev"
+echo "DONE. Worker: ${URL:-<above>}   Site: https://tellcheck.munzzyy.dev"
 echo "Next (yours): submit dist/tellcheck-github-*.zip to addons.mozilla.org (see listing.md)."
