@@ -174,6 +174,19 @@ LIST_BODY = "\n".join(
     for n in range(1, 24)
 ) + '\n<div class="js-issue-row"><a href="/otherowner/otherrepo/pull/99">a PR in another repo</a></div>'
 
+QUOTES_BODY = TITLE + """
+<div class="timeline-comment"><div class="comment-body"><p>The description of this pull request, long enough to read.</p></div></div>
+<div class="timeline-comment"><div class="comment-body">
+  <blockquote><p>QUOTED-MARKER This comprehensive change delves into a robust, seamless approach.</p></blockquote>
+  <p>my own reply text here, the second case still fails on my machine</p>
+</div></div>
+<div class="timeline-comment"><div class="comment-body">
+  <p>replying by email, the fix works for me now</p>
+  <div class="email-hidden-reply"><p>EMAIL-QUOTE-MARKER On Monday someone wrote a long paragraph.</p></div>
+</div></div>
+<div class="timeline-comment"><div class="comment-body"><pre>only a stack trace in this one</pre></div></div>
+"""
+
 PAGES = {
     "/someowner/somerepo/pull/1": page(DETAIL_BODY, f"() => ({json.dumps(MOCK_RESPONSE)})"),
     "/someowner/somerepo/pull/2": page(LONG_THREAD, f"({ANSWER_ALL})(0)"),
@@ -182,6 +195,7 @@ PAGES = {
         "ok": False, "error": "quota",
         "quota": {"allowed": False, "meter": "ok", "used": 0, "limit": 500, "reason": "network daily cap reached"},
     }) + ")"),
+    "/someowner/somerepo/pull/5": page(QUOTES_BODY, f"({ANSWER_ALL})(0)"),
     "/someowner/somerepo/pulls": page(LIST_BODY, f"() => ({json.dumps(LIST_MOCK)})"),
 }
 
@@ -235,6 +249,7 @@ def main():
     _, capped = dump(port, "/someowner/somerepo/pull/3")
     _, listing = dump(port, "/someowner/somerepo/pulls")
     _, network = dump(port, "/someowner/somerepo/pull/4")
+    _, quotes = dump(port, "/someowner/somerepo/pull/5")
     httpd.shutdown()
 
     checks = [
@@ -329,6 +344,20 @@ def main():
 
     checks.append(("a network-cap refusal says the shared network limit, not the daily limit",
                    network.get("fabText") == "This network's shared daily limit is used up"))
+
+    # Quoted text is someone else's words; a block with nothing of its own still gets a chip.
+    quoted_sent = quotes.get("sentTexts") or []
+    quote_chips = quotes.get("chips") or []
+    checks.append(("quote-reply text never sent as the commenter's",
+                   bool(quoted_sent) and all("QUOTED-MARKER" not in t for t in quoted_sent)))
+    checks.append(("hidden email quote never sent",
+                   bool(quoted_sent) and all("EMAIL-QUOTE-MARKER" not in t for t in quoted_sent)))
+    checks.append(("the reply under a quote is still sent",
+                   any("my own reply text here" in t for t in quoted_sent)))
+    checks.append(("a code-only block reads not scored (no prose)",
+                   quote_chips[-1:] == ["Tellcheck: not scored (no prose)"]))
+    checks.append(("every block gets a chip", quotes.get("blocks") == 4 and len(quote_chips) == 4
+                   and all(quote_chips)))
 
     ok = True
     for name, passed in checks:

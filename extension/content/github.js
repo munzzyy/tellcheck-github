@@ -62,11 +62,12 @@
     return blocks;
   }
 
-  // Rendered text minus code: the detector judges prose, so drop code blocks
-  // the way the server drops fenced code from raw markdown.
+  // The commenter's own prose: no code, and no quoted text, which is someone
+  // else's words (a quote-reply or the hidden quote of an email reply).
   function proseOf(el) {
     const clone = el.cloneNode(true);
-    clone.querySelectorAll("pre, code, .highlight, .blob-wrapper").forEach((n) => n.remove());
+    clone.querySelectorAll("pre, code, .highlight, .blob-wrapper, blockquote, .email-hidden-reply")
+      .forEach((n) => n.remove());
     return (clone.innerText || "").trim();
   }
 
@@ -81,7 +82,7 @@
       if (i === 0 && titleEl) text = `${titleEl.textContent.trim()}\n\n${text}`;
       // Block 0 is the PR/issue description: longer-form genre, kind "pr".
       // Everything after it is a thread comment.
-      if (text) items.push({ id: `b${i}`, text, el, kind: i === 0 ? "pr" : "comment" });
+      items.push({ id: `b${i}`, text, el, kind: i === 0 ? "pr" : "comment" });
     });
     return items;
   }
@@ -150,6 +151,7 @@
     budget: ["scan limit", "Refused as over the scoring server's per-request limit."],
     quota: ["daily limit", "The daily scan limit ran out before this one."],
     error: ["server error", "The scoring server did not answer."],
+    prose: ["no prose", "Only code, quotes or images, no written text to score."],
   };
 
   function notScoredReason(r) {
@@ -258,8 +260,13 @@
     b.textContent = "Scanning...";
     clearBadges();
     try {
-      const texts = collectTexts();
-      if (!texts.length) { b.textContent = "Nothing to scan here"; return; }
+      const blocks = collectTexts();
+      const texts = blocks.filter((t) => t.text);
+      if (!texts.length) {
+        for (const t of blocks) t.el.insertAdjacentElement("beforebegin", notScoredChip("prose"));
+        b.textContent = "Nothing to scan here";
+        return;
+      }
       const resp = await api.runtime.sendMessage({
         type: "scan",
         texts: texts.map(({ id, text, kind }) => ({ id, text, kind })),
@@ -273,7 +280,11 @@
       const byId = new Map(resp.results.map((r) => [r.id, r]));
       let flagged = 0, scored = 0;
       const miss = { budget: 0, quota: 0, error: 0 };
-      for (const t of texts) {
+      for (const t of blocks) {
+        if (!t.text) {
+          t.el.insertAdjacentElement("beforebegin", notScoredChip("prose"));
+          continue;
+        }
         const r = byId.get(t.id);
         // Missing from the response or refused: say so instead of silently skipping.
         const why = notScoredReason(r);

@@ -11,6 +11,9 @@ the version they shipped next to and marked "(worker)".
   a busy batch scan are no longer left "not scored".
 - When the daily limit runs out partway through a scan, what fits gets scored
   and the rest is marked "not scored (daily limit)".
+- Quoted text is left out of the score. A reviewer who quote-replies to a
+  drafted paragraph is scored on their own words, not the quote. A comment
+  with only code or images reads "not scored (no prose)".
 - The batch scan strips PR-template HTML comments and code from PR bodies
   before sending them. The privacy policy always said it did.
 - The batch scan scores the PRs on the page you are looking at, so filtered
