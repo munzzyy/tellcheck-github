@@ -27,8 +27,8 @@ jobs:
       # fixtures: constructed texts pinning the tricky cases (unicode word
       # boundaries, round-half-even labels, band edges). The larger
       # corpus-derived set stays out of the repo and runs locally instead.
-      - name: Comment-style layer parity
-        run: node --test test/comment-tells.test.mjs
+      - name: Comment-style layer parity and reason copy
+        run: node --test test/comment-tells.test.mjs test/style-copy.test.mjs
 
       # Real background.js against a stub worker that enforces the caps and the meter.
       - name: Background script

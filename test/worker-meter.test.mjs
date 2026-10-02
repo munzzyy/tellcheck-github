@@ -1,5 +1,6 @@
 // Worker tests that do not depend on the detector: the daily meter, the
-// request caps and input validation. CI runs them against a stub detector:
+// request caps, input validation and the style reason copy. CI runs them
+// against a stub detector:
 //   node --import ./test/stub-detector.mjs --test test/worker-meter.test.mjs
 // Locally, with the real detector synced in, plain node --test runs them too.
 import { test } from "node:test";
@@ -283,4 +284,16 @@ test("cleanup alarm is armed once per instance, not once per scan", async () => 
   const inst = ns.instances.get("q:alarm-install:" + new Date().toISOString().slice(0, 10));
   assert.ok(inst, "expected a durable object instance for the install counter");
   assert.equal(inst.calls.setAlarm, 1, `alarm should be armed once, was ${inst.calls.setAlarm}`);
+});
+
+test("style reasons in a /score reply use the maintainer copy", async () => {
+  const text = "This change updates the parser to handle empty sections correctly and adds a regression " +
+    "test covering the case where the configuration file contains a section header followed by no keys at all.";
+  const r = await worker.fetch(req({ install: "style-copy", texts: [{ id: "a", text, kind: "comment" }] }), { QUOTA: mockKV() });
+  const d = await r.json();
+  const reasons = d.results[0].style_reasons;
+  assert.ok(reasons.length > 0, "expected the text to trip at least one style row");
+  for (const reason of reasons) {
+    assert.ok(!/house style|cut it hard|split the|state the fact|open with what is new|they know|real reviewers ask; drafts assert|real comments point at something/i.test(reason), reason);
+  }
 });

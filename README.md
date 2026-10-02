@@ -85,11 +85,12 @@ test/               worker suite and a headless DOM smoke test
 python3 tools/sync_detector.py        # pull the private detector into the worker
 node --test test/worker.test.mjs      # 13 tests that need the detector, no network
 node --import ./test/stub-detector.mjs --test test/worker-meter.test.mjs
-                                      # 17 meter and request-cap tests; without the
-                                      # detector they run against test/detector-stub.mjs
+                                      # 18 meter, request-cap and style-copy tests; without
+                                      # the detector they run against test/detector-stub.mjs
 node --test test/comment-tells.test.mjs  # comment-style layer vs the Python original; the synthetic
                                          # fixtures always run, the full corpus set runs when found
                                          # locally (see test/comment-fixtures.mjs)
+node --test test/style-copy.test.mjs  # style reasons read for the maintainer, not the drafter
 node --test test/background.test.mjs  # request splitting and quota handling, stub worker
 python3 test/content_smoke.py         # drives the real content script in headless chromium
 python3 test/popup_smoke.py           # the popup's quota line for each stored quota state

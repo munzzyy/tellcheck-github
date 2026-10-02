@@ -34,6 +34,7 @@
 // of any word-count math.
 import Noslop from "./detector-core.js";
 import { commentTells } from "./comment-tells.js";
+import { styleReason } from "./style-copy.js";
 
 // Validated operating point for the comment-style layer: flag when points > 7.
 // Repo-grouped 5-fold CV; pooled held-out at this point: 25.0% TPR on
@@ -146,7 +147,7 @@ export function scoreText(text, maxWords = MAX_WORDS_PER_TEXT, kind = "pr") {
     signals: topSignals(r),
     style_flag: style.points > STYLE_THRESHOLD,
     style_points: style.points,
-    style_reasons: style.rows.map(([label, hint]) => `${label}: ${hint}`),
+    style_reasons: style.rows.map(styleReason),
   };
 }
 

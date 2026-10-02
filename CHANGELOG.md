@@ -24,6 +24,9 @@ the version they shipped next to and marked "(worker)".
 - When the shared cap for a whole network is what stopped a scan, the popup and
   the page say so. The popup used to show your own count against the network
   limit.
+- The reasons under a style badge describe the comment for the maintainer
+  reading it. They used to give editing advice meant for the person drafting
+  it (worker).
 - Relicensed from MIT to GPL-3.0-or-later. Earlier versions stay under MIT.
 - The site moved to tellcheck.munzzyy.dev.
 - `tools/package.sh` refuses to build a zip when web-ext lint fails or is
