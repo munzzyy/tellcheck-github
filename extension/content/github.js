@@ -281,41 +281,78 @@
     }
   }
 
+  // Each PR on the list page, by number, with the first link that names it.
+  function listedPrs(owner, repo) {
+    const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+    const found = new Map();
+    for (const a of document.querySelectorAll("a[href*='/pull/']")) {
+      let path;
+      try { path = new URL(a.getAttribute("href"), location.href).pathname; } catch { continue; }
+      const m = path.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)\/?$/);
+      if (!m || !same(m[1], owner) || !same(m[2], repo)) continue;
+      if (!found.has(Number(m[3]))) found.set(Number(m[3]), a);
+    }
+    return found;
+  }
+
+  function miniFor(result, why) {
+    let cls, label, said;
+    if (why) {
+      cls = "abstain"; label = "not scored"; said = NOT_SCORED[why][1];
+    } else if (result.flagged) {
+      cls = "flag";
+      label = result.p === null || result.p === undefined ? "AI? artifact" : `AI? p ${Number(result.p).toFixed(2)}`;
+      said = result.verdict;
+    } else if (result.style_flag) {
+      cls = "style"; label = "style?";
+      said = `${result.verdict}; separate style signal: the comment style reads assistant-drafted`;
+    } else if (result.abstained) {
+      cls = "abstain"; label = "n/a"; said = result.verdict;
+    } else {
+      cls = "clean"; label = "ok"; said = result.verdict;
+    }
+    const mini = el("span", `${NS}-mini ${NS}-${cls}`, label);
+    mini.title = said;
+    mini.appendChild(el("span", `${NS}-sr`, `, Tellcheck: ${said}`));
+    return mini;
+  }
+
   async function scanList(owner, repo) {
     if (busy) return;
     busy = true;
     const b = fab();
     b.textContent = "Scanning open PRs...";
     try {
-      const resp = await api.runtime.sendMessage({ type: "batch", owner, repo }).catch(() => null);
+      document.querySelectorAll(`.${NS}-mini`).forEach((n) => n.remove());
+      const links = listedPrs(owner, repo);
+      if (!links.size) { b.textContent = "No PRs on this page"; return; }
+      const resp = await api.runtime.sendMessage({ type: "batch", owner, repo, numbers: [...links.keys()] })
+        .catch(() => null);
       if (!resp || !resp.ok) {
         b.textContent =
           resp && (resp.error === "github" || resp.error === "network") ? (resp.detail || "Network failed") :
           resp && resp.error === "quota" ? "Daily scan limit reached" :
           resp && resp.error === "no_open_prs" ? "No open PRs" :
+          resp && resp.error === "not_found" ? "None of these are in the 100 newest open PRs" :
           "Batch scan failed";
         return;
       }
-      let flagged = 0, missed = 0;
+      let shown = 0, flagged = 0, missed = 0;
       for (const row of resp.rows) {
+        const link = links.get(row.number);
+        if (!link) continue;
         const why = notScoredReason(row.result);
-        const r = why ? null : row.result;
-        const link = document.querySelector(`a[href$='/pull/${row.number}']`);
-        if (!link) { if (!r) missed++; continue; }
-        const old = link.parentElement.querySelector(`.${NS}-mini`);
-        if (old) old.remove();
-        const mini = r
-          ? el("span",
-              `${NS}-mini ${NS}-${r.abstained ? "abstain" : r.flagged ? "flag" : "clean"}`,
-              r.abstained ? "n/a" : r.flagged ? `AI? p ${r.p}` : "ok")
-          : el("span", `${NS}-mini ${NS}-abstain`, "not scored");
-        mini.title = r ? r.verdict : NOT_SCORED[why][1];
-        link.insertAdjacentElement("afterend", mini);
-        if (r && r.flagged) flagged++;
-        if (!r) missed++;
+        link.insertAdjacentElement("afterend", miniFor(row.result, why));
+        shown++;
+        if (why) missed++;
+        else if (row.result.flagged) flagged++;
       }
-      const tail = missed ? ` (${missed} not scored)` : "";
-      b.textContent = `${flagged} flagged of ${resp.rows.length}${tail}. Rescan`;
+      const notFound = (resp.notFound || []).length;
+      const tail = [
+        missed && `${missed} not scored`,
+        notFound && `${notFound} not among the 100 newest open PRs`,
+      ].filter(Boolean).join(", ");
+      b.textContent = `${flagged} flagged of ${shown}${tail ? ` (${tail})` : ""}. Rescan`;
     } catch {
       b.textContent = "Batch scan failed";
     } finally {

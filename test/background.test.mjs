@@ -124,7 +124,7 @@ test("a long thread is split so every block gets scored", async () => {
 test("a batch of 25 long PR bodies scores every row", async () => {
   const prs = Array.from({ length: 25 }, (_, i) => pr(i + 1, words(300)));
   const h = harness({ prs });
-  const resp = await h.send({ type: "batch", owner: "o", repo: "r" });
+  const resp = await h.send({ type: "batch", owner: "o", repo: "r", numbers: prs.map((p) => p.number) });
   assert.equal(resp.ok, true);
   assert.deepEqual(h.violations, []);
   assert.equal(resp.rows.length, 25);
@@ -186,7 +186,7 @@ test("batch strips template comments and code before anything is sent", async ()
       pr(3, "Real words here.\n<!-- unterminated TEMPLATE-MARKER comment\nrest of the template"),
     ],
   });
-  const resp = await h.send({ type: "batch", owner: "o", repo: "r" });
+  const resp = await h.send({ type: "batch", owner: "o", repo: "r", numbers: [1, 2, 3] });
   assert.equal(resp.ok, true);
   const posted = JSON.stringify(h.scoreCalls);
   for (const marker of ["TEMPLATE-MARKER", "CODE-MARKER-1", "CODE-MARKER-2", "CODE-MARKER-3"]) {
@@ -197,4 +197,44 @@ test("batch strips template comments and code before anything is sent", async ()
   assert.ok(sent.get("1").includes("then the parser keeps going."));
   assert.equal(sent.get("2"), "Speed up the lexer");
   assert.equal(sent.get("3"), "PR 3\n\nReal words here.");
+});
+
+test("batch scores only the PRs on the page and reports the ones GitHub did not list", async () => {
+  const prs = Array.from({ length: 40 }, (_, i) => pr(i + 1, words(30)));
+  const h = harness({ prs });
+  const resp = await h.send({ type: "batch", owner: "o", repo: "r", numbers: [12, 3, 3, 30, 77] });
+  assert.equal(resp.ok, true);
+  const sentIds = h.scoreCalls.flatMap((c) => c.texts.map((t) => t.id));
+  assert.deepEqual(sentIds, ["12", "3", "30"]);
+  assert.deepEqual(resp.rows.map((r) => r.number), [12, 3, 30]);
+  assert.deepEqual(resp.notFound, [77]);
+  assert.match(h.githubCalls[0], /state=open&per_page=100$/);
+});
+
+test("batch with no listed PR among the open ones scores nothing", async () => {
+  const h = harness({ prs: [pr(1, words(30))] });
+  const resp = await h.send({ type: "batch", owner: "o", repo: "r", numbers: [500] });
+  assert.equal(resp.ok, false);
+  assert.equal(resp.error, "not_found");
+  assert.equal(h.scoreCalls.length, 0);
+});
+
+for (const [status, headers] of [[429, {}], [403, { "x-ratelimit-remaining": "0" }]]) {
+  test(`GitHub ${status} ${JSON.stringify(headers)} reads as the rate limit`, async () => {
+    const h = harness({ github: () => reply(status, { message: "API rate limit exceeded" }, headers) });
+    const resp = await h.send({ type: "batch", owner: "o", repo: "r", numbers: [1] });
+    assert.equal(resp.ok, false);
+    assert.equal(resp.error, "github");
+    assert.match(resp.detail, /rate limit/);
+    assert.match(resp.detail, /token/);
+    assert.equal(h.scoreCalls.length, 0);
+  });
+}
+
+test("GitHub 404 points at a token for private repos", async () => {
+  const h = harness({ github: () => reply(404, { message: "Not Found" }) });
+  const resp = await h.send({ type: "batch", owner: "o", repo: "private-one", numbers: [1] });
+  assert.equal(resp.ok, false);
+  assert.match(resp.detail, /private/);
+  assert.match(resp.detail, /token/);
 });

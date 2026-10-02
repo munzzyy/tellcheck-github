@@ -80,6 +80,12 @@ PROBE = """
         fabText: fab ? fab.textContent : null,
         blocks: blocks.length,
         chips: blocks.map(b => { const c = b.querySelector(".tellcheck-chip"); return c ? c.textContent : null; }),
+        minis: [...document.querySelectorAll(".tellcheck-mini")].map(m => ({
+          after: m.previousElementSibling && m.previousElementSibling.getAttribute("href"),
+          cls: m.className,
+          label: m.firstChild.textContent,
+          text: m.textContent,
+        })),
       });
       document.body.appendChild(out);
     }, 300);
@@ -137,10 +143,41 @@ LONG_THREAD = TITLE + "\n" + comments(
     [f"comment number {i} on this long thread, with enough words in it to be worth scoring"
      for i in range(31)])
 
+def list_row(n, verdict, **extra):
+    return {"number": n, "title": f"PR {n}", "author": "someone",
+            "url": f"https://github.com/someowner/somerepo/pull/{n}",
+            "result": {"id": str(n), "verdict": verdict, "words": 120, "signals": [], **extra}}
+
+
+CLEAN = "no detection at the 5% false-positive operating point"
+FLAGS = "flags as AI at the 5% false-positive operating point"
+# Rows 24 and 25 are not on the page: a reply covering them must not move the counts.
+LIST_MOCK = {
+    "ok": True,
+    "rows": [
+        list_row(1, FLAGS, p=1, flagged=True, abstained=False),
+        list_row(2, FLAGS, p=0.9195, flagged=True, abstained=False),
+        list_row(3, CLEAN, p=0.1, flagged=False, abstained=False, style_flag=True, style_points=8.5),
+        list_row(4, "not scored: under 20 words", p=None, flagged=False, abstained=True),
+        list_row(5, "not scored: the daily scan limit ran out before this text",
+                 p=None, flagged=False, abstained=True, reason="quota"),
+    ] + [list_row(n, CLEAN, p=0.05, flagged=False, abstained=False) for n in range(6, 24)]
+      + [list_row(n, FLAGS, p=0.99, flagged=True, abstained=False) for n in (24, 25)],
+    "notFound": [],
+    "quota": {"used": 22, "limit": 100, "meter": "ok"},
+}
+
+LIST_BODY = "\n".join(
+    f'<div class="js-issue-row"><a class="Link--primary" href="/someowner/somerepo/pull/{n}">PR {n}</a>'
+    f' <a href="/someowner/somerepo/pull/{n}#issuecomment-{n}">{n} comments</a></div>'
+    for n in range(1, 24)
+) + '\n<div class="js-issue-row"><a href="/otherowner/otherrepo/pull/99">a PR in another repo</a></div>'
+
 PAGES = {
     "/someowner/somerepo/pull/1": page(DETAIL_BODY, f"() => ({json.dumps(MOCK_RESPONSE)})"),
     "/someowner/somerepo/pull/2": page(LONG_THREAD, f"({ANSWER_ALL})(0)"),
     "/someowner/somerepo/pull/3": page(LONG_THREAD, f"({ANSWER_ALL})(4)"),
+    "/someowner/somerepo/pulls": page(LIST_BODY, f"() => ({json.dumps(LIST_MOCK)})"),
 }
 
 
@@ -188,6 +225,7 @@ def main():
     dom, out = dump(port, "/someowner/somerepo/pull/1")
     _, long_thread = dump(port, "/someowner/somerepo/pull/2")
     _, capped = dump(port, "/someowner/somerepo/pull/3")
+    _, listing = dump(port, "/someowner/somerepo/pulls")
     httpd.shutdown()
 
     checks = [
@@ -248,6 +286,27 @@ def main():
     checks.append(("daily-limit refusals get their own chip, on exactly those blocks", marked == [27, 28, 29, 30]))
     checks.append(("fab says how many ran past the daily limit",
                    capped.get("fabText") == "No flags in 27 scored, 4 past the daily limit. Rescan"))
+
+    # The list page scores the PRs it shows, not whatever GitHub lists first.
+    sent_list = listing.get("sent") or {}
+    minis = {m["after"]: m for m in listing.get("minis") or []}
+    mini = lambda n: minis.get(f"/someowner/somerepo/pull/{n}") or {}
+    verdicts = {r["number"]: r["result"]["verdict"] for r in LIST_MOCK["rows"]}
+    checks.append(("batch asks for exactly the PRs on the page",
+                   sent_list.get("type") == "batch" and sent_list.get("numbers") == list(range(1, 24))))
+    checks.append(("one mini per listed PR, none for another repo's link",
+                   len(listing.get("minis") or []) == 23 and "/otherowner/otherrepo/pull/99" not in minis))
+    checks.append(("list fab counts only the rows on the page",
+                   listing.get("fabText") == "2 flagged of 23 (1 not scored). Rescan"))
+    checks.append(("list p reads two decimals like the detail chips",
+                   mini(1).get("label") == "AI? p 1.00" and mini(2).get("label") == "AI? p 0.92"))
+    checks.append(("every mini carries its verdict as text, not only a tooltip",
+                   len(minis) == 23 and all(
+                       verdicts[n] in mini(n).get("text", "") if n != 5 else "daily scan limit" in mini(n).get("text", "")
+                       for n in range(1, 24))))
+    checks.append(("a style-only row is not marked ok",
+                   mini(3).get("label") not in (None, "ok") and "tellcheck-style" in mini(3).get("cls", "")))
+    checks.append(("a daily-limit row reads not scored", mini(5).get("label") == "not scored"))
 
     ok = True
     for name, passed in checks:

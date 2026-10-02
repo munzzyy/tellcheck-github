@@ -144,10 +144,20 @@ function proseOf(markdown) {
   return String(markdown || "").replace(NOT_PROSE, "").trim();
 }
 
-// Batch: list open PRs of a repo (their bodies come back in the same call)
-// and score title+body per PR. One GitHub request, then scoreTexts.
-// Covers the 25 most recently updated open PRs.
-async function batchScan(owner, repo) {
+function githubTrouble(gh, hasToken) {
+  const limited = gh.status === 429 ||
+    (gh.status === 403 && (gh.headers.get("x-ratelimit-remaining") === "0" || gh.headers.get("retry-after")));
+  if (limited) return hasToken ? "GitHub rate limit hit, try again later" : "GitHub rate limit hit (add a token in options)";
+  if (gh.status === 401) return "GitHub turned down the token in options";
+  if (gh.status === 403) return "GitHub refused access to this repo";
+  if (gh.status === 404) return "Repo not found (private repos need a GitHub token in options)";
+  return `GitHub answered ${gh.status}`;
+}
+
+// Only PRs listed on the page get scored; one GitHub call returns up to 100 open ones with bodies.
+async function batchScan(owner, repo, numbers) {
+  const wanted = Array.isArray(numbers) ? [...new Set(numbers.map(Number).filter(Number.isInteger))] : [];
+  if (!wanted.length) return { ok: false, error: "no_open_prs" };
   const settings = await getSettings();
   const headers = { accept: "application/vnd.github+json" };
   if (settings.githubPat) headers.authorization = `Bearer ${settings.githubPat}`;
@@ -155,20 +165,22 @@ async function batchScan(owner, repo) {
   let gh;
   try {
     gh = await fetch(
-      `https://api.github.com/repos/${safe(owner)}/${safe(repo)}/pulls?state=open&per_page=25`,
+      `https://api.github.com/repos/${safe(owner)}/${safe(repo)}/pulls?state=open&per_page=100`,
       { headers },
     );
   } catch {
     return { ok: false, error: "network", detail: "GitHub unreachable" };
   }
-  if (!gh.ok) {
-    const detail = gh.status === 403 ? "GitHub rate limit hit (add a token in options)" : `GitHub answered ${gh.status}`;
-    return { ok: false, error: "github", detail };
-  }
-  const prs = await gh.json();
+  if (!gh.ok) return { ok: false, error: "github", detail: githubTrouble(gh, !!settings.githubPat) };
+  const prs = await gh.json().catch(() => null);
   if (!Array.isArray(prs) || !prs.length) return { ok: false, error: "no_open_prs" };
 
-  const texts = prs.map((pr) => ({
+  const byNumber = new Map(prs.map((pr) => [pr.number, pr]));
+  const onPage = wanted.filter((n) => byNumber.has(n)).map((n) => byNumber.get(n));
+  const notFound = wanted.filter((n) => !byNumber.has(n));
+  if (!onPage.length) return { ok: false, error: "not_found", notFound };
+
+  const texts = onPage.map((pr) => ({
     id: String(pr.number),
     text: proseOf(`${pr.title || ""}\n\n${pr.body || ""}`),
     kind: "pr",
@@ -177,7 +189,7 @@ async function batchScan(owner, repo) {
   if (!scored.ok) return scored;
 
   const byId = new Map(scored.results.map((r) => [r.id, r]));
-  const rows = prs.map((pr) => ({
+  const rows = onPage.map((pr) => ({
     number: pr.number,
     title: pr.title,
     author: pr.user && pr.user.login,
@@ -187,7 +199,7 @@ async function batchScan(owner, repo) {
   await api.storage.local.set({
     lastBatch: { owner, repo, at: new Date().toISOString(), rows },
   });
-  return { ok: true, rows, quota: scored.quota, dropped: scored.dropped || 0 };
+  return { ok: true, rows, notFound, quota: scored.quota, dropped: scored.dropped || 0 };
 }
 
 api.runtime.onMessage.addListener((msg) => {
@@ -195,7 +207,7 @@ api.runtime.onMessage.addListener((msg) => {
     case "scan":
       return scoreTexts(msg.texts).catch(() => ({ ok: false, error: "internal" }));
     case "batch":
-      return batchScan(msg.owner, msg.repo).catch(() => ({ ok: false, error: "internal" }));
+      return batchScan(msg.owner, msg.repo, msg.numbers).catch(() => ({ ok: false, error: "internal" }));
     case "settings":
       return getSettings();
     default:

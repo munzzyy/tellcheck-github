@@ -89,6 +89,18 @@
   vertical-align: middle;
 }
 
+.tellcheck-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .tellcheck-flag { background: var(--tc-flag-bg); border-color: var(--tc-flag-bd); color: var(--tc-flag-fg); }
 .tellcheck-clean { background: var(--tc-clean-bg); border-color: var(--tc-clean-bd); color: var(--tc-clean-fg); }
 .tellcheck-abstain { background: var(--tc-abstain-bg); border-color: var(--tc-abstain-bd); color: var(--tc-abstain-fg); }
